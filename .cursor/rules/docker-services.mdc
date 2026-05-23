@@ -1,0 +1,38 @@
+---
+description: Executar comandos de serviços via Docker Compose
+alwaysApply: true
+---
+
+# Comandos via Docker
+
+Todos os comandos no contexto de um serviço do monorepo devem ser executados **dentro do container**, a partir da raiz do repositório.
+
+## Padrão
+
+```bash
+docker compose exec {service} {comando}
+```
+
+## Serviço `web`
+
+| Local (evitar) | Docker (usar) |
+|---|---|
+| `cd web && npm install` | `docker compose exec web npm install` |
+| `cd web && npm run dev` | `docker compose up -d web` |
+| `cd web && npm run build` | `docker compose exec web npm run build` |
+| `cd web && npm run typecheck` | `docker compose exec web npm run typecheck` |
+
+## Serviço `api`
+
+| Local (evitar) | Docker (usar) |
+|---|---|
+| `cd api && composer install` | `docker compose exec api composer install` |
+| `cd api && php artisan migrate` | `docker compose exec api php artisan migrate` |
+| `cd api && php artisan test` | `docker compose exec api php artisan test` |
+| `cd api && php artisan tinker` | `docker compose exec api php artisan tinker` |
+
+## Regras
+
+- Não executar `npm`, `node`, `npx`, `composer`, `php` ou `artisan` diretamente no host para `web/` ou `api/`.
+- Se o container não estiver rodando, subir com `docker compose up -d {service}` antes de `exec`.
+- Infra compartilhada (`mysql`, `redis`, `mailhog`, `nginx`) sobe junto com `docker compose up -d`.
