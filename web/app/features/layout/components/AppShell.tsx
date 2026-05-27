@@ -5,6 +5,7 @@ import { useAuth } from "~/features/auth/hooks/useAuth";
 const navItems = [
   { to: "/kanban", label: "Kanban" },
   { to: "/inbox", label: "Atendimento" },
+  { to: "/configuracoes", label: "Configurações" },
 ];
 
 export function AppShell() {
