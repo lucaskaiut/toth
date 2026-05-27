@@ -15,6 +15,11 @@ type ChatPanelProps = {
   conversation: Conversation | null;
 };
 
+type SendPayload = {
+  content: string;
+  replaceId?: number;
+};
+
 export function ChatPanel({ conversation }: ChatPanelProps) {
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -29,22 +34,95 @@ export function ChatPanel({ conversation }: ChatPanelProps) {
   });
 
   const sendMutation = useMutation({
-    mutationFn: (content: string) =>
+    mutationFn: ({ content }: SendPayload) =>
       conversationsApi.sendMessage(conversation!.id, content),
+    onMutate: async ({ content, replaceId }: SendPayload) => {
+      const queryKey = conversationMessagesQueryKey(conversation!.id);
+
+      await queryClient.cancelQueries({ queryKey });
+
+      const optimisticId = -Date.now();
+      const now = new Date().toISOString();
+
+      queryClient.setQueryData(
+        queryKey,
+        (current: { data: import("~/types/crm").Message[] } | undefined) => {
+          const optimisticMessage: import("~/types/crm").Message = {
+            id: replaceId ?? optimisticId,
+            conversation_id: conversation!.id,
+            origin: "user",
+            content,
+            sent_at: now,
+            user: null,
+            client_status: "pending",
+          };
+
+          if (!current) {
+            return { data: [optimisticMessage] };
+          }
+
+          if (replaceId) {
+            return {
+              data: current.data.map((item) =>
+                item.id === replaceId ? optimisticMessage : item,
+              ),
+            };
+          }
+
+          return { data: [...current.data, optimisticMessage] };
+        },
+      );
+
+      setDraft("");
+
+      return { optimisticId: replaceId ?? optimisticId };
+    },
     onSuccess: (response) => {
       queryClient.setQueryData(
         conversationMessagesQueryKey(conversation!.id),
         (current: { data: import("~/types/crm").Message[] } | undefined) => {
+          const serverMessage = { ...response.data, client_status: "sent" as const };
+
           if (!current) {
-            return { data: [response.data] };
+            return { data: [serverMessage] };
           }
 
-          return { data: [...current.data, response.data] };
+          const replaced = current.data.map((item) =>
+            item.client_status === "pending" &&
+            item.origin === "user" &&
+            item.content === serverMessage.content
+              ? serverMessage
+              : item,
+          );
+
+          const exists = replaced.some((item) => item.id === serverMessage.id);
+          return exists ? { data: replaced } : { data: [...replaced, serverMessage] };
         },
       );
 
       void queryClient.invalidateQueries({ queryKey: CONVERSATIONS_QUERY_KEY });
-      setDraft("");
+    },
+    onError: (_error, _payload, context) => {
+      if (!context?.optimisticId) {
+        return;
+      }
+
+      queryClient.setQueryData(
+        conversationMessagesQueryKey(conversation!.id),
+        (current: { data: import("~/types/crm").Message[] } | undefined) => {
+          if (!current) {
+            return current;
+          }
+
+          return {
+            data: current.data.map((item) =>
+              item.id === context.optimisticId
+                ? { ...item, client_status: "failed" }
+                : item,
+            ),
+          };
+        },
+      );
     },
   });
 
@@ -63,7 +141,7 @@ export function ChatPanel({ conversation }: ChatPanelProps) {
   const messages = messagesQuery.data?.data ?? [];
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <header className="border-b border-border px-6 py-4">
         <h2 className="text-lg font-semibold">{conversation.lead?.name}</h2>
         <p className="text-sm text-muted">{conversation.lead?.phone}</p>
@@ -73,11 +151,22 @@ export function ChatPanel({ conversation }: ChatPanelProps) {
         <ConversationAttendanceControls conversation={conversation} />
       </header>
 
-      <div className="flex-1 space-y-3 overflow-y-auto px-6 py-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
         {messagesQuery.isLoading ? (
           <p className="text-sm text-muted">Carregando mensagens...</p>
         ) : (
-          messages.map((message) => <MessageBubble key={message.id} message={message} />)
+          messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              onRetry={() => {
+                if (message.origin !== "user") return;
+                if (message.client_status !== "failed") return;
+
+                sendMutation.mutate({ content: message.content, replaceId: message.id });
+              }}
+            />
+          ))
         )}
         <div ref={bottomRef} />
       </div>
@@ -91,7 +180,7 @@ export function ChatPanel({ conversation }: ChatPanelProps) {
             return;
           }
 
-          sendMutation.mutate(draft.trim());
+          sendMutation.mutate({ content: draft.trim() });
         }}
       >
         <Input
@@ -100,7 +189,7 @@ export function ChatPanel({ conversation }: ChatPanelProps) {
           placeholder="Digite sua mensagem..."
           className="flex-1"
         />
-        <Button type="submit" isLoading={sendMutation.isPending}>
+        <Button type="submit">
           Enviar
         </Button>
       </form>

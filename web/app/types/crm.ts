@@ -40,6 +40,8 @@ export type Conversation = {
 
 export type MessageOrigin = "customer" | "ai" | "user";
 
+export type MessageDeliveryStatus = "pending" | "sent" | "failed";
+
 export type Message = {
   id: number;
   conversation_id: number;
@@ -47,6 +49,13 @@ export type Message = {
   content: string;
   sent_at: string;
   user?: { id: number; name: string } | null;
+  /**
+   * Estado local para UI otimista (não vem da API).
+   * - pending: exibida imediatamente, aguardando confirmação
+   * - sent: confirmada pela API / realtime
+   * - failed: falha no envio (pode tentar reenviar)
+   */
+  client_status?: MessageDeliveryStatus;
 };
 
 export type CompanyConfig = {

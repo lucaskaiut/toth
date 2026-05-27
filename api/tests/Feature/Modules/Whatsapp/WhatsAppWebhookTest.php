@@ -20,6 +20,7 @@ class WhatsAppWebhookTest extends TestCase
     public function test_webhook_creates_lead_conversation_and_message(): void
     {
         Queue::fake();
+        config(['whatsapp.webhook_token' => 'test-webhook-token']);
 
         $company = Company::factory()->create();
         app(PipelineStageService::class)->seedForCompany($company);
@@ -31,7 +32,8 @@ class WhatsAppWebhookTest extends TestCase
             'type' => CompanyConfigType::String,
         ]);
 
-        $response = $this->postJson('/api/webhooks/whatsapp', [
+        $response = $this->withHeader('authorization', 'Bearer test-webhook-token')
+            ->postJson('/api/webhooks/whatsapp', [
             'event' => 'messages.upsert',
             'instance' => 'minha-instancia',
             'data' => [

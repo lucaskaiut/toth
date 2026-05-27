@@ -56,6 +56,7 @@ class ConversationAttendanceTest extends TestCase
     public function test_webhook_does_not_schedule_ai_when_handoff_to_human(): void
     {
         Queue::fake();
+        config(['whatsapp.webhook_token' => 'test-webhook-token']);
 
         $company = Company::factory()->create();
         app(PipelineStageService::class)->seedForCompany($company);
@@ -81,7 +82,8 @@ class ConversationAttendanceTest extends TestCase
             'attendance_status' => ConversationAttendanceStatus::HandoffToHuman,
         ]);
 
-        $response = $this->postJson('/api/webhooks/whatsapp', [
+        $response = $this->withHeader('authorization', 'Bearer test-webhook-token')
+            ->postJson('/api/webhooks/whatsapp', [
             'event' => 'messages.upsert',
             'instance' => 'instancia-teste',
             'data' => [

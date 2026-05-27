@@ -32,8 +32,10 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       queryClient.setQueryData(
         conversationMessagesQueryKey(payload.message.conversation_id),
         (current: { data: Message[] } | undefined) => {
+          const serverMessage: Message = { ...payload.message, client_status: "sent" };
+
           if (!current) {
-            return current;
+            return { data: [serverMessage] };
           }
 
           const exists = current.data.some((item) => item.id === payload.message.id);
@@ -42,18 +44,35 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
             return current;
           }
 
+          // Se houver mensagem otimista pendente (mesmo conteúdo), substitui para evitar duplicação.
+          const pendingIndex = current.data.findIndex(
+            (item) =>
+              item.client_status === "pending" &&
+              item.origin === "user" &&
+              item.content === serverMessage.content,
+          );
+
+          if (pendingIndex >= 0) {
+            const next = [...current.data];
+            next[pendingIndex] = serverMessage;
+            return { data: next };
+          }
+
           return {
-            data: [...current.data, payload.message],
+            data: [...current.data, serverMessage],
           };
         },
       );
 
       void queryClient.invalidateQueries({ queryKey: CONVERSATIONS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: LEADS_QUERY_KEY });
     });
 
     channel.listen(".lead.stage_changed", (payload: { lead: Lead }) => {
       queryClient.setQueryData(LEADS_QUERY_KEY, (current: { data: Lead[] } | undefined) => {
         if (!current) {
+          // Se o Kanban ainda não carregou, ao menos dispara refetch quando/ se estiver ativo.
+          void queryClient.invalidateQueries({ queryKey: LEADS_QUERY_KEY });
           return current;
         }
 
@@ -90,6 +109,9 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
             };
           },
         );
+
+        // Conversa atualizada (ex.: novo lead criado pelo webhook) pode impactar o Kanban.
+        void queryClient.invalidateQueries({ queryKey: LEADS_QUERY_KEY });
       },
     );
 

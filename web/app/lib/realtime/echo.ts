@@ -6,6 +6,10 @@ import { tokenStorage } from "~/lib/auth/token.storage";
 let echoInstance: Echo<"pusher"> | null = null;
 
 export function getEcho(): Echo<"pusher"> | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
   const key = import.meta.env.VITE_REVERB_APP_KEY;
 
   if (!key) {
@@ -25,6 +29,9 @@ export function getEcho(): Echo<"pusher"> | null {
   echoInstance = new Echo({
     broadcaster: "pusher",
     key,
+    // pusher-js exige cluster mesmo quando usamos wsHost custom.
+    // Reverb não usa cluster, então usamos um valor dummy.
+    cluster: "mt1",
     wsHost: host,
     wsPort: port,
     wssPort: port,
