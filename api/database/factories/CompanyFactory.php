@@ -16,6 +16,15 @@ class CompanyFactory extends Factory
     {
         return [
             'name' => fake()->company(),
+            'whatsapp' => '5511999999999',
+            'status' => \App\Modules\Company\Domain\Enums\CompanyStatus::Active,
         ];
+    }
+
+    public function pendingWhatsapp(): static
+    {
+        return $this->state(fn () => [
+            'status' => \App\Modules\Company\Domain\Enums\CompanyStatus::PendingWhatsappConnection,
+        ]);
     }
 }

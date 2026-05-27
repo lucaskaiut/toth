@@ -1,3 +1,4 @@
+import { Navigate } from "react-router";
 import type { Route } from "./+types/_app._index";
 
 export function meta({}: Route.MetaArgs) {
@@ -5,5 +6,5 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function HomePage() {
-  return null;
+  return <Navigate to="/kanban" replace />;
 }

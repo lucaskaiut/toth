@@ -3,6 +3,7 @@
 namespace App\Modules\Auth\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Auth\Domain\Exceptions\RegisterProvisioningException;
 use App\Modules\Auth\Domain\Exceptions\UnsupportedRegisterChannelException;
 use App\Modules\Auth\Domain\Services\RegisterService;
 use App\Modules\Auth\Http\Requests\RegisterRequest;
@@ -20,11 +21,15 @@ class RegisterController extends Controller
         try {
             $result = $this->registerService->register(
                 $request->validated('channel'),
-                $request->validated('data'),
+                $request->validated('data') ?? [],
             );
         } catch (UnsupportedRegisterChannelException) {
             return response()->json([
                 'message' => 'Canal de cadastro não suportado.',
+            ], 422);
+        } catch (RegisterProvisioningException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
             ], 422);
         }
 

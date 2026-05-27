@@ -6,6 +6,10 @@ use App\Modules\Auth\Domain\Channels\InternalLoginChannel;
 use App\Modules\Auth\Domain\Channels\InternalRegisterChannel;
 use App\Modules\Auth\Domain\Services\LoginService;
 use App\Modules\Auth\Domain\Services\RegisterService;
+use App\Modules\Company\Domain\CurrentCompany;
+use App\Modules\Conversation\Domain\Models\Conversation;
+use App\Modules\Lead\Domain\Models\Lead;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -26,6 +30,8 @@ class AppServiceProvider extends ServiceProvider
                 'internal' => $app->make(InternalRegisterChannel::class),
             ]);
         });
+
+        $this->app->scoped(CurrentCompany::class);
     }
 
     /**
@@ -33,6 +39,28 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Route::bind('lead', function (string $value) {
+            $companyId = auth()->user()?->company_id;
+
+            if ($companyId === null) {
+                abort(403);
+            }
+
+            return Lead::query()
+                ->where('company_id', $companyId)
+                ->findOrFail($value);
+        });
+
+        Route::bind('conversation', function (string $value) {
+            $companyId = auth()->user()?->company_id;
+
+            if ($companyId === null) {
+                abort(403);
+            }
+
+            return Conversation::query()
+                ->where('company_id', $companyId)
+                ->findOrFail($value);
+        });
     }
 }

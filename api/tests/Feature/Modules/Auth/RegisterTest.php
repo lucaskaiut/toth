@@ -3,13 +3,29 @@
 namespace Tests\Feature\Modules\Auth;
 
 use App\Models\User;
+use App\Modules\Company\Domain\Enums\CompanyStatus;
 use App\Modules\Company\Domain\Models\Company;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class RegisterTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config([
+            'whatsapp.api_key' => 'test-global-key',
+            'whatsapp.base_url' => 'http://evolution.test',
+        ]);
+
+        Http::fake([
+            'http://evolution.test/instance/create' => Http::response([], 201),
+        ]);
+    }
 
     public function test_register_with_internal_channel_returns_token_and_user(): void
     {
@@ -17,9 +33,10 @@ class RegisterTest extends TestCase
             'channel' => 'internal',
             'data' => [
                 'company_name' => 'Acme Inc',
+                'whatsapp' => '5511999887766',
                 'name' => 'Admin',
                 'email' => 'admin@example.com',
-                'password' => 'secret',
+                'password' => 'secret123',
             ],
         ]);
 
@@ -35,7 +52,11 @@ class RegisterTest extends TestCase
             ->assertJsonPath('data.user.email', 'admin@example.com');
 
         $this->assertNotEmpty($response->json('data.token'));
-        $this->assertDatabaseHas('companies', ['name' => 'Acme Inc']);
+        $this->assertDatabaseHas('companies', [
+            'name' => 'Acme Inc',
+            'whatsapp' => '5511999887766',
+            'status' => CompanyStatus::PendingWhatsappConnection->value,
+        ]);
         $this->assertDatabaseHas('users', [
             'email' => 'admin@example.com',
             'company_id' => Company::query()->value('id'),
@@ -51,9 +72,10 @@ class RegisterTest extends TestCase
             'channel' => 'internal',
             'data' => [
                 'company_name' => 'Acme Inc',
+                'whatsapp' => '5511999887766',
                 'name' => 'Admin',
                 'email' => 'admin@example.com',
-                'password' => 'secret',
+                'password' => 'secret123',
             ],
         ]);
 

@@ -15,6 +15,11 @@ class AuthUserResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
+            'company_id' => $this->company_id,
+            'company' => $this->whenLoaded(
+                'company',
+                fn () => new AuthCompanyResource($this->company),
+            ),
         ];
     }
 }

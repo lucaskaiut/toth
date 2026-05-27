@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { resolveInitialAuthStatus } from "~/lib/auth/bootstrap";
 import { tokenStorage } from "~/lib/auth/token.storage";
 import type { AuthStatus, AuthUser } from "~/types/auth";
 
@@ -13,7 +14,7 @@ type AuthState = {
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  status: "idle",
+  status: resolveInitialAuthStatus(),
 
   setLoading: () => set({ status: "loading" }),
 
@@ -33,5 +34,4 @@ export const useAuthStore = create<AuthState>((set) => ({
 export const selectIsAuthenticated = (state: AuthState) =>
   state.status === "authenticated";
 
-export const selectIsAuthLoading = (state: AuthState) =>
-  state.status === "idle" || state.status === "loading";
+export const selectIsAuthLoading = (state: AuthState) => state.status === "loading";

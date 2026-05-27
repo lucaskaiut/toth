@@ -13,6 +13,7 @@ export type LoginData = {
 
 export type RegisterData = {
   company_name: string;
+  whatsapp: string;
   name: string;
   email: string;
   password: string;

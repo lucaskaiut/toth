@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { useNavigate } from "react-router";
 import { authApi } from "~/lib/api/auth.api";
 import { setUnauthorizedHandler } from "~/lib/api/client";
@@ -23,25 +23,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await authApi.me();
       return response.data;
     },
-    enabled: hasToken && status !== "unauthenticated",
+    enabled: hasToken && status === "loading",
     retry: false,
   });
 
-  useEffect(() => {
-    if (!hasToken) {
-      setUnauthenticated();
+  useLayoutEffect(() => {
+    if (!tokenStorage.get()) {
+      if (status !== "unauthenticated") {
+        setUnauthenticated();
+      }
       return;
     }
 
-    if (status === "idle") {
+    if (status === "unauthenticated") {
       setLoading();
     }
-  }, [hasToken, setLoading, setUnauthenticated, status]);
+  }, [setLoading, setUnauthenticated, status]);
 
   useEffect(() => {
-    if (!hasToken) return;
+    if (!hasToken || !meQuery.isFetched) {
+      return;
+    }
 
-    if (meQuery.isSuccess) {
+    if (meQuery.isSuccess && meQuery.data) {
       setUser(meQuery.data);
       useAuthStore.setState({ status: "authenticated" });
       return;
@@ -55,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     hasToken,
     meQuery.data,
     meQuery.isError,
+    meQuery.isFetched,
     meQuery.isSuccess,
     queryClient,
     setUnauthenticated,

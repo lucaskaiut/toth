@@ -10,6 +10,6 @@ class MeController extends Controller
 {
     public function show(Request $request): AuthUserResource
     {
-        return new AuthUserResource($request->user());
+        return new AuthUserResource($request->user()->load('company'));
     }
 }

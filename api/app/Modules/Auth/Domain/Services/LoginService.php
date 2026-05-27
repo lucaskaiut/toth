@@ -32,6 +32,6 @@ class LoginService
 
         $token = $user->createToken('auth')->plainTextToken;
 
-        return new LoginResult(user: $user, token: $token);
+        return new LoginResult(user: $user->load('company'), token: $token);
     }
 }

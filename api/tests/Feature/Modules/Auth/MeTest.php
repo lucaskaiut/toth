@@ -3,6 +3,7 @@
 namespace Tests\Feature\Modules\Auth;
 
 use App\Models\User;
+use App\Modules\Company\Domain\Models\Company;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -13,7 +14,9 @@ class MeTest extends TestCase
 
     public function test_returns_authenticated_user(): void
     {
+        $company = Company::factory()->create();
         $user = User::factory()->create([
+            'company_id' => $company->id,
             'name' => 'Admin',
             'email' => 'admin@example.com',
         ]);

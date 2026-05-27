@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
+import { maskBrazilPhone } from "~/lib/phone/mask";
 import { Alert } from "~/components/ui/Alert";
 import { Button } from "~/components/ui/Button";
 import { FormField } from "~/components/ui/FormField";
@@ -19,12 +20,14 @@ export function RegisterForm() {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       company_name: "",
+      whatsapp: "",
       name: "",
       email: "",
       password: "",
@@ -72,6 +75,31 @@ export function RegisterForm() {
             autoComplete="organization"
             hasError={Boolean(errors.company_name)}
             {...register("company_name")}
+          />
+        </FormField>
+
+        <FormField
+          id="whatsapp"
+          label="WhatsApp da empresa"
+          error={errors.whatsapp?.message}
+          hint="Número principal com DDD"
+        >
+          <Controller
+            name="whatsapp"
+            control={control}
+            render={({ field }) => (
+              <Input
+                id="whatsapp"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="(11) 99999-9999"
+                hasError={Boolean(errors.whatsapp)}
+                value={field.value}
+                onChange={(event) =>
+                  field.onChange(maskBrazilPhone(event.target.value))
+                }
+              />
+            )}
           />
         </FormField>
 

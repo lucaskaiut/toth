@@ -14,6 +14,13 @@ export const registerSchema = z
       .string()
       .min(1, "Informe o nome da empresa")
       .max(255, "Nome da empresa muito longo"),
+    whatsapp: z
+      .string()
+      .min(1, "Informe o WhatsApp da empresa")
+      .refine((value) => {
+        const digits = value.replace(/\D/g, "");
+        return digits.length >= 10 && digits.length <= 13;
+      }, "Informe um WhatsApp válido com DDD e número"),
     name: z
       .string()
       .min(1, "Informe seu nome")

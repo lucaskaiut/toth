@@ -28,6 +28,22 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  reverb:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: toth-reverb
+    working_dir: /var/www/html
+    volumes:
+      - ./api:/var/www/html
+    command: php artisan reverb:start --host=0.0.0.0 --port=8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      - api
+      - redis
+    restart: unless-stopped
+
   nginx:
     image: nginx:1.27-alpine
     container_name: toth-nginx

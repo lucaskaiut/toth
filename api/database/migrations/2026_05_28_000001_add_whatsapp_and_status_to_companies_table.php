@@ -1,0 +1,23 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('companies', function (Blueprint $table) {
+            $table->string('whatsapp', 20)->nullable()->after('name');
+            $table->string('status', 40)->default('pending_whatsapp_connection')->after('whatsapp');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('companies', function (Blueprint $table) {
+            $table->dropColumn(['whatsapp', 'status']);
+        });
+    }
+};
