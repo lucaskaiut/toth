@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\HealthController;
 use App\Modules\Auth\Http\Controllers\LoginController;
 use App\Modules\Auth\Http\Controllers\MeController;
 use App\Modules\Auth\Http\Controllers\RegisterController;
@@ -13,6 +14,8 @@ use App\Modules\Lead\Http\Controllers\PipelineStageController;
 use App\Modules\Whatsapp\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/health', HealthController::class);
 
 Route::post('/login', [LoginController::class, 'store']);
 Route::post('/register', [RegisterController::class, 'store']);
