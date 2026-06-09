@@ -5,11 +5,12 @@ namespace App\Modules\Conversation\Domain\Services;
 use App\Core\AI\Contracts\AiClient;
 use App\Core\AI\DTOs\AiChatMessage;
 use App\Core\AI\DTOs\AiChatRequest;
+use App\Core\AI\DTOs\AiParseContext;
 use App\Core\AI\DTOs\AiStructuredResponse;
 use App\Core\AI\DTOs\AiToolCall;
 use App\Core\AI\Support\AiStructuredResponseParser;
+use App\Core\Integration\DTOs\ExternalToolExecutionResult;
 use App\Modules\ExternalIntegration\Domain\Services\ExternalToolService;
-use InvalidArgumentException;
 
 class ConversationAiToolRunner
 {
@@ -36,23 +37,42 @@ class ConversationAiToolRunner
             $openAiTools,
         ));
         $maxIterations = (int) config('integration.max_tool_iterations', 5);
+        $hadToolActivity = false;
+        $toolFailed = false;
 
         for ($iteration = 0; $iteration < $maxIterations; $iteration++) {
-            $expectTools = $hasTools && $iteration < ($maxIterations - 1);
+            $isFinalIteration = $iteration === ($maxIterations - 1);
+            $expectTools = $hasTools && ! $isFinalIteration;
+            $requestMessages = $messages;
+
+            if ($isFinalIteration) {
+                $requestMessages[] = new AiChatMessage(
+                    role: 'system',
+                    content: trim((string) config('ai.final_tool_response_instructions')),
+                );
+            }
 
             $completion = $this->aiClient->completion(new AiChatRequest(
                 baseUrl: $baseUrl,
                 model: $model,
                 apiKey: $apiKey,
-                messages: $messages,
+                messages: $requestMessages,
                 responseFormat: $expectTools ? null : 'json_object',
                 tools: $expectTools ? $openAiTools : null,
                 companyId: $companyId,
             ));
 
             if (! $completion->hasToolCalls()) {
-                return $this->structuredResponseParser->parse($completion->content);
+                return $this->structuredResponseParser->parse(
+                    $completion->content,
+                    new AiParseContext(
+                        hadToolActivity: $hadToolActivity,
+                        toolFailed: $toolFailed,
+                    ),
+                );
             }
+
+            $hadToolActivity = true;
 
             $messages[] = new AiChatMessage(
                 role: 'assistant',
@@ -61,21 +81,30 @@ class ConversationAiToolRunner
             );
 
             foreach ($completion->toolCalls as $toolCall) {
+                $result = $this->executeToolCall($companyId, $toolCall, $allowedToolNames);
+
+                if (! $result->success) {
+                    $toolFailed = true;
+                }
+
                 $messages[] = new AiChatMessage(
                     role: 'tool',
-                    content: $this->executeToolCall($companyId, $toolCall, $allowedToolNames),
+                    content: $result->toLlmInstructionContent(),
                     toolCallId: $toolCall->id,
                 );
             }
         }
 
-        throw new InvalidArgumentException('Limite de execuções de ferramentas atingido.');
+        return $this->structuredResponseParser->parse('{"success":false}', new AiParseContext(
+            hadToolActivity: true,
+            toolFailed: true,
+        ));
     }
 
     /**
      * @param  list<string>  $allowedToolNames
      */
-    private function executeToolCall(int $companyId, AiToolCall $toolCall, array $allowedToolNames): string
+    private function executeToolCall(int $companyId, AiToolCall $toolCall, array $allowedToolNames): ExternalToolExecutionResult
     {
         $parameters = json_decode($toolCall->arguments, true);
 
@@ -83,14 +112,11 @@ class ConversationAiToolRunner
             $parameters = [];
         }
 
-        $result = $this->externalToolService->execute(
+        return $this->externalToolService->execute(
             $companyId,
             $toolCall->name,
             $parameters,
             $allowedToolNames,
         );
-
-        return $result->toToolMessageContent();
     }
-
 }

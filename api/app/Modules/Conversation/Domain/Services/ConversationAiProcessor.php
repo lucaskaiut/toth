@@ -29,6 +29,7 @@ class ConversationAiProcessor
         private readonly ConversationAiToolRunner $conversationAiToolRunner,
         private readonly ExternalToolService $externalToolService,
         private readonly IntegrationLogService $integrationLogService,
+        private readonly ConversationAttendanceService $attendanceService,
         private readonly WhatsAppClient $whatsAppClient,
     ) {}
 
@@ -48,10 +49,19 @@ class ConversationAiProcessor
         }
 
         $config = new CompanyConfigResolver($companyId);
-
         $messages = $this->contextBuilder->build($conversation);
-
         $hasExternalTools = $this->externalToolService->connectionForCompany($companyId) !== null;
+
+        $this->integrationLogService->info(
+            integration: 'ai',
+            action: 'process',
+            message: $hasExternalTools ? 'Processamento com ferramentas externas' : 'Processamento sem ferramentas externas',
+            context: [
+                'conversation_id' => $conversation->id,
+                'model' => $aiConfig->model,
+            ],
+            companyId: $companyId,
+        );
 
         $chatRequest = new AiChatRequest(
             baseUrl: $aiConfig->baseUrl,
@@ -84,6 +94,19 @@ class ConversationAiProcessor
             $aiResponse = $this->aiClient->chat($chatRequest);
         }
 
+        if ($aiResponse->isGenericFallback) {
+            $this->integrationLogService->info(
+                integration: 'ai',
+                action: 'fallback_message',
+                message: 'Fallback genérico aplicado na resposta da IA',
+                context: [
+                    'conversation_id' => $conversation->id,
+                    'parse_note' => $aiResponse->parseNote,
+                ],
+                companyId: $companyId,
+            );
+        }
+
         DB::transaction(function () use ($conversation, $aiResponse, $companyId, $config) {
             $this->conversationService->updateSummary($conversation, $aiResponse->summary);
 
@@ -91,7 +114,11 @@ class ConversationAiProcessor
             $lead = $this->leadService->moveToStageBySlugForAi($conversation->lead, $aiResponse->suggestedStage);
             $conversation->setRelation('lead', $lead);
 
-            if ($aiResponse->shouldReply && $aiResponse->message !== '') {
+            $shouldPersistMessage = $aiResponse->shouldReply
+                && $aiResponse->message !== ''
+                && ! $aiResponse->isGenericFallback;
+
+            if ($shouldPersistMessage) {
                 $aiMessage = $this->messageService->store(
                     $conversation,
                     MessageOrigin::Ai,
@@ -100,6 +127,10 @@ class ConversationAiProcessor
 
                 broadcast(new MessageCreated($companyId, $aiMessage))->toOthers();
                 $this->sendWhatsApp($lead->phone, $aiResponse->message, $config);
+            }
+
+            if ($aiResponse->requiresHandoff) {
+                $conversation = $this->attendanceService->handoffToHuman($conversation);
             }
 
             broadcast(new \App\Modules\Realtime\Events\ConversationUpdated($companyId, $conversation->fresh(['lead.pipelineStage'])))->toOthers();

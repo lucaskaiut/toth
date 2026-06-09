@@ -9,5 +9,8 @@ readonly class AiStructuredResponse
         public ?string $suggestedStage,
         public string $summary,
         public bool $shouldReply = true,
+        public bool $requiresHandoff = false,
+        public bool $isGenericFallback = false,
+        public ?string $parseNote = null,
     ) {}
 }

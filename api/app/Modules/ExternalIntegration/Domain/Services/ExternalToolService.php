@@ -6,12 +6,15 @@ use App\Core\Integration\Contracts\ExternalToolClient;
 use App\Core\Integration\DTOs\ExternalToolDefinition;
 use App\Core\Integration\DTOs\ExternalToolExecutionResult;
 use App\Core\Integration\DTOs\IntegrationConnection;
+use App\Modules\IntegrationLog\Domain\Services\IntegrationLogService;
 
 class ExternalToolService
 {
     public function __construct(
         private readonly ExternalToolClient $externalToolClient,
         private readonly CompanyIntegrationResolver $companyIntegrationResolver,
+        private readonly ExternalToolParameterValidator $parameterValidator,
+        private readonly IntegrationLogService $integrationLogService,
     ) {}
 
     public function connectionForCompany(int $companyId): ?IntegrationConnection
@@ -74,7 +77,45 @@ class ExternalToolService
             );
         }
 
+        $definition = $this->findToolDefinition($companyId, $toolName);
+
+        if ($definition !== null) {
+            $validationError = $this->parameterValidator->validate($definition, $parameters);
+
+            if ($validationError !== null) {
+                $this->integrationLogService->info(
+                    integration: 'external:tools',
+                    action: 'validate_parameters',
+                    message: $validationError,
+                    context: [
+                        'tool' => $toolName,
+                        'parameters' => $parameters,
+                    ],
+                    companyId: $companyId,
+                );
+
+                return new ExternalToolExecutionResult(
+                    success: false,
+                    error: [
+                        'type' => 'validation',
+                        'message' => $validationError,
+                    ],
+                );
+            }
+        }
+
         return $this->externalToolClient->executeTool($connection, $toolName, $parameters);
+    }
+
+    private function findToolDefinition(int $companyId, string $toolName): ?ExternalToolDefinition
+    {
+        foreach ($this->discoverTools($companyId) as $tool) {
+            if ($tool->name === $toolName) {
+                return $tool;
+            }
+        }
+
+        return null;
     }
 
     /**

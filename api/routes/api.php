@@ -5,6 +5,7 @@ use App\Modules\Auth\Http\Controllers\LoginController;
 use App\Modules\Auth\Http\Controllers\MeController;
 use App\Modules\Auth\Http\Controllers\RegisterController;
 use App\Modules\Company\Http\Controllers\CompanyWhatsAppSetupController;
+use App\Modules\ExternalIntegration\Http\Controllers\CompanyIntegrationController;
 use App\Modules\CompanyConfig\Http\Controllers\CompanyConfigController;
 use App\Modules\Conversation\Http\Controllers\ConversationController;
 use App\Modules\Lead\Http\Controllers\LeadController;
@@ -48,6 +49,7 @@ Route::middleware(['auth:sanctum', 'company'])->group(function () {
 
     Route::get('/company-configs', [CompanyConfigController::class, 'index']);
     Route::put('/company-configs', [CompanyConfigController::class, 'update']);
+    Route::get('/company/integration/status', [CompanyIntegrationController::class, 'status']);
 
     Route::prefix('knowledge')->group(function () {
         Route::get('/sources', [KnowledgeSourceController::class, 'index']);

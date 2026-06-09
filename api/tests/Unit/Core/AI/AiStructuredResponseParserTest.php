@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Core\AI;
 
+use App\Core\AI\DTOs\AiParseContext;
 use App\Core\AI\Support\AiStructuredResponseParser;
 use InvalidArgumentException;
 use Tests\TestCase;
@@ -14,7 +15,10 @@ class AiStructuredResponseParserTest extends TestCase
     {
         parent::setUp();
 
-        config(['ai.fallback_message' => 'Mensagem padrão de fallback.']);
+        config([
+            'ai.fallback_message' => 'Fallback genérico.',
+            'ai.tool_error_handoff_message' => 'Não consegui consultar a agenda agora. Vou encaminhar para a equipe.',
+        ]);
         $this->parser = new AiStructuredResponseParser;
     }
 
@@ -25,10 +29,39 @@ class AiStructuredResponseParserTest extends TestCase
             'summary' => 'Cliente enviou 3 mensagens com oi sem contexto claro.',
         ]));
 
-        $this->assertTrue($response->shouldReply);
+        $this->assertTrue($response->isGenericFallback);
+        $this->assertSame('Fallback genérico.', $response->message);
         $this->assertSame('novo_lead', $response->suggestedStage);
-        $this->assertSame('Mensagem padrão de fallback.', $response->message);
-        $this->assertStringContainsString('3 mensagens', $response->summary);
+    }
+
+    public function test_missing_message_with_tool_context_triggers_handoff_not_generic_fallback(): void
+    {
+        $response = $this->parser->parse(
+            json_encode([
+                'stage' => 'novo_lead',
+                'summary' => 'Cliente pediu disponibilidade para consulta.',
+            ]),
+            new AiParseContext(hadToolActivity: true, toolFailed: true),
+        );
+
+        $this->assertFalse($response->isGenericFallback);
+        $this->assertTrue($response->requiresHandoff);
+        $this->assertSame(
+            'Não consegui consultar a agenda agora. Vou encaminhar para a equipe.',
+            $response->message,
+        );
+    }
+
+    public function test_tool_error_response_triggers_handoff_instead_of_generic_fallback(): void
+    {
+        $response = $this->parser->parse(json_encode([
+            'success' => false,
+            'error' => ['message' => 'Timeout na API externa'],
+        ]));
+
+        $this->assertTrue($response->requiresHandoff);
+        $this->assertFalse($response->isGenericFallback);
+        $this->assertStringContainsString('Timeout na API externa', $response->summary);
     }
 
     public function test_keeps_explicit_should_reply_false_without_fallback(): void
@@ -40,6 +73,7 @@ class AiStructuredResponseParserTest extends TestCase
 
         $this->assertFalse($response->shouldReply);
         $this->assertSame('', $response->message);
+        $this->assertFalse($response->isGenericFallback);
     }
 
     public function test_throws_for_invalid_json(): void

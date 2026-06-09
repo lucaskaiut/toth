@@ -78,7 +78,7 @@ class OpenAiCompatibleClientTest extends TestCase
         $this->assertTrue($response->shouldReply);
     }
 
-    public function test_accepts_stage_alias_and_applies_fallback_message(): void
+    public function test_accepts_stage_alias_and_applies_generic_fallback_when_no_tool_context(): void
     {
         Http::fake([
             '*' => Http::response([
@@ -105,6 +105,7 @@ class OpenAiCompatibleClientTest extends TestCase
         ));
 
         $this->assertSame('novo_lead', $response->suggestedStage);
+        $this->assertTrue($response->isGenericFallback);
         $this->assertSame('Olá! Como posso ajudar?', $response->message);
         $this->assertTrue($response->shouldReply);
     }

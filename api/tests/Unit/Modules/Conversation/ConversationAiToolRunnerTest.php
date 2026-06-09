@@ -13,7 +13,9 @@ use App\Core\Integration\DTOs\IntegrationConnection;
 use App\Core\Integration\Enums\ExternalIntegrationProvider;
 use App\Modules\Conversation\Domain\Services\ConversationAiToolRunner;
 use App\Modules\ExternalIntegration\Domain\Services\CompanyIntegrationResolver;
+use App\Modules\ExternalIntegration\Domain\Services\ExternalToolParameterValidator;
 use App\Modules\ExternalIntegration\Domain\Services\ExternalToolService;
+use App\Modules\IntegrationLog\Domain\Services\IntegrationLogService;
 use Mockery;
 use Tests\TestCase;
 
@@ -37,7 +39,7 @@ class ConversationAiToolRunnerTest extends TestCase
         $resolver->shouldReceive('resolve')->with(1)->andReturn($connection);
 
         $externalClient = Mockery::mock(ExternalToolClient::class);
-        $externalClient->shouldReceive('discoverTools')->once()->andReturn([
+        $externalClient->shouldReceive('discoverTools')->twice()->andReturn([
             new ExternalToolDefinition(
                 name: 'check_availability',
                 description: 'Consulta horários',
@@ -69,9 +71,17 @@ class ConversationAiToolRunnerTest extends TestCase
             ),
         );
 
+        $logService = Mockery::mock(IntegrationLogService::class);
+        $logService->shouldReceive('info')->andReturnNull();
+
         $runner = new ConversationAiToolRunner(
             $aiClient,
-            new ExternalToolService($externalClient, $resolver),
+            new ExternalToolService(
+                $externalClient,
+                $resolver,
+                new ExternalToolParameterValidator,
+                $logService,
+            ),
         );
 
         $response = $runner->run(

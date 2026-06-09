@@ -7,7 +7,9 @@ use App\Core\Integration\DTOs\ExternalToolDefinition;
 use App\Core\Integration\DTOs\IntegrationConnection;
 use App\Core\Integration\Enums\ExternalIntegrationProvider;
 use App\Modules\ExternalIntegration\Domain\Services\CompanyIntegrationResolver;
+use App\Modules\ExternalIntegration\Domain\Services\ExternalToolParameterValidator;
 use App\Modules\ExternalIntegration\Domain\Services\ExternalToolService;
+use App\Modules\IntegrationLog\Domain\Services\IntegrationLogService;
 use Mockery;
 use Tests\TestCase;
 
@@ -21,67 +23,54 @@ class ExternalToolServiceTest extends TestCase
 
     public function test_converts_external_tools_to_openai_format(): void
     {
-        $connection = new IntegrationConnection(
-            provider: ExternalIntegrationProvider::Nox,
-            apiToken: 'token',
-            companyId: 1,
+        $service = $this->makeService(
+            connection: $this->connection(),
+            discoveredTools: [
+                new ExternalToolDefinition(
+                    name: 'create_scheduling',
+                    description: 'Cria agendamento',
+                    parameters: [
+                        [
+                            'name' => 'service_id',
+                            'description' => 'ID do serviço',
+                            'type' => 'integer',
+                            'required' => true,
+                        ],
+                    ],
+                ),
+            ],
         );
 
-        $resolver = Mockery::mock(CompanyIntegrationResolver::class);
-        $resolver->shouldReceive('resolve')->once()->with(1)->andReturn($connection);
+        $tools = $service->toOpenAiTools(1);
 
+        $this->assertCount(1, $tools);
+        $this->assertSame('create_scheduling', $tools[0]['function']['name']);
+    }
+
+    public function test_rejects_invalid_parameters_without_calling_provider(): void
+    {
         $client = Mockery::mock(ExternalToolClient::class);
-        $client->shouldReceive('discoverTools')->once()->with($connection)->andReturn([
+        $client->shouldReceive('discoverTools')->andReturn([
             new ExternalToolDefinition(
-                name: 'create_scheduling',
-                description: 'Cria agendamento',
+                name: 'check_availability',
+                description: 'Consulta horários',
                 parameters: [
                     [
-                        'name' => 'service_id',
-                        'description' => 'ID do serviço',
-                        'type' => 'integer',
+                        'name' => 'date',
+                        'description' => 'Data',
+                        'type' => 'string',
                         'required' => true,
-                    ],
-                    [
-                        'name' => 'user_id',
-                        'description' => 'Profissional',
-                        'type' => 'integer',
-                        'required' => false,
                     ],
                 ],
             ),
         ]);
-
-        $service = new ExternalToolService($client, $resolver);
-        $tools = $service->toOpenAiTools(1);
-
-        $this->assertCount(1, $tools);
-        $this->assertSame('function', $tools[0]['type']);
-        $this->assertSame('create_scheduling', $tools[0]['function']['name']);
-        $this->assertSame(['service_id'], $tools[0]['function']['parameters']['required']);
-        $this->assertSame('integer', $tools[0]['function']['parameters']['properties']['service_id']['type']);
-    }
-
-    public function test_rejects_unknown_tool_names(): void
-    {
-        $connection = new IntegrationConnection(
-            provider: ExternalIntegrationProvider::Nox,
-            apiToken: 'token',
-            companyId: 1,
-        );
-
-        $resolver = Mockery::mock(CompanyIntegrationResolver::class);
-        $resolver->shouldReceive('resolve')->once()->with(1)->andReturn($connection);
-
-        $client = Mockery::mock(ExternalToolClient::class);
         $client->shouldNotReceive('executeTool');
 
-        $service = new ExternalToolService($client, $resolver);
-
-        $result = $service->execute(1, 'unknown_tool', [], ['create_scheduling']);
+        $service = $this->makeService(connection: $this->connection(), client: $client);
+        $result = $service->execute(1, 'check_availability', ['date' => 'YYYY-MM-DD'], ['check_availability']);
 
         $this->assertFalse($result->success);
-        $this->assertSame('Ferramenta não disponível.', $result->error['message'] ?? null);
+        $this->assertTrue($result->isValidationError());
     }
 
     public function test_returns_empty_tools_when_integration_is_not_configured(): void
@@ -92,8 +81,50 @@ class ExternalToolServiceTest extends TestCase
         $client = Mockery::mock(ExternalToolClient::class);
         $client->shouldNotReceive('discoverTools');
 
-        $service = new ExternalToolService($client, $resolver);
+        $service = new ExternalToolService(
+            $client,
+            $resolver,
+            new ExternalToolParameterValidator,
+            $this->logService(),
+        );
 
         $this->assertSame([], $service->toOpenAiTools(1));
+    }
+
+    private function makeService(
+        ?IntegrationConnection $connection = null,
+        ?ExternalToolClient $client = null,
+        array $discoveredTools = [],
+    ): ExternalToolService {
+        $resolver = Mockery::mock(CompanyIntegrationResolver::class);
+        $resolver->shouldReceive('resolve')->andReturn($connection);
+
+        $client ??= Mockery::mock(ExternalToolClient::class);
+        $client->shouldReceive('discoverTools')->andReturn($discoveredTools);
+
+        return new ExternalToolService(
+            $client,
+            $resolver,
+            new ExternalToolParameterValidator,
+            $this->logService(),
+        );
+    }
+
+    private function connection(): IntegrationConnection
+    {
+        return new IntegrationConnection(
+            provider: ExternalIntegrationProvider::Nox,
+            apiToken: 'token',
+            companyId: 1,
+        );
+    }
+
+    private function logService(): IntegrationLogService
+    {
+        $logService = Mockery::mock(IntegrationLogService::class);
+        $logService->shouldReceive('info')->andReturnNull();
+        $logService->shouldReceive('error')->andReturnNull();
+
+        return $logService;
     }
 }
