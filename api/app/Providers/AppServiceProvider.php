@@ -8,9 +8,14 @@ use App\Modules\Auth\Domain\Services\LoginService;
 use App\Modules\Auth\Domain\Services\RegisterService;
 use App\Modules\Company\Domain\CurrentCompany;
 use App\Modules\Conversation\Domain\Models\Conversation;
+use App\Modules\Knowledge\Domain\Models\KnowledgeSource;
 use App\Modules\Lead\Domain\Models\Lead;
+use App\Modules\Lead\Domain\Models\PipelineStage;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use App\Core\Logging\Contracts\LogDriver;
+use App\Core\Logging\Drivers\HorusLogDriver;
+use App\Core\Logging\Drivers\NullLogDriver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,6 +37,17 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->scoped(CurrentCompany::class);
+
+        $this->app->singleton(LogDriver::class, function () {
+            $enabled = (bool) config('horus.enabled', true);
+            $driver = (string) config('horus.driver', 'horus');
+
+            if (! $enabled || $driver !== 'horus') {
+                return new NullLogDriver;
+            }
+
+            return new HorusLogDriver;
+        });
     }
 
     /**
@@ -40,7 +56,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Route::bind('lead', function (string $value) {
-            $companyId = auth()->user()?->company_id;
+            /** @var \App\Models\User|null $user */
+            $user = request()->user();
+            $companyId = $user?->company_id;
 
             if ($companyId === null) {
                 abort(403);
@@ -52,13 +70,43 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Route::bind('conversation', function (string $value) {
-            $companyId = auth()->user()?->company_id;
+            /** @var \App\Models\User|null $user */
+            $user = request()->user();
+            $companyId = $user?->company_id;
 
             if ($companyId === null) {
                 abort(403);
             }
 
             return Conversation::query()
+                ->where('company_id', $companyId)
+                ->findOrFail($value);
+        });
+
+        Route::bind('knowledgeSource', function (string $value) {
+            /** @var \App\Models\User|null $user */
+            $user = request()->user();
+            $companyId = $user?->company_id;
+
+            if ($companyId === null) {
+                abort(403);
+            }
+
+            return KnowledgeSource::query()
+                ->where('company_id', $companyId)
+                ->findOrFail($value);
+        });
+
+        Route::bind('stage', function (string $value) {
+            /** @var \App\Models\User|null $user */
+            $user = request()->user();
+            $companyId = $user?->company_id;
+
+            if ($companyId === null) {
+                abort(403);
+            }
+
+            return PipelineStage::query()
                 ->where('company_id', $companyId)
                 ->findOrFail($value);
         });

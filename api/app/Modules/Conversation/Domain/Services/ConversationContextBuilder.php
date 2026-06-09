@@ -6,11 +6,18 @@ use App\Core\AI\DTOs\AiChatMessage;
 use App\Modules\CompanyConfig\Domain\Services\CompanyConfigResolver;
 use App\Modules\Conversation\Domain\Enums\MessageOrigin;
 use App\Modules\Conversation\Domain\Models\Conversation;
+use App\Modules\Conversation\Domain\Models\Message;
+use App\Modules\ExternalIntegration\Domain\Services\CompanyIntegrationResolver;
+use App\Modules\Knowledge\Domain\Services\KnowledgeContextBuilder;
+use App\Modules\Lead\Domain\Services\PipelineStageService;
 
 class ConversationContextBuilder
 {
     public function __construct(
         private readonly MessageService $messageService,
+        private readonly KnowledgeContextBuilder $knowledgeContextBuilder,
+        private readonly PipelineStageService $pipelineStageService,
+        private readonly CompanyIntegrationResolver $companyIntegrationResolver,
     ) {}
 
     /**
@@ -25,13 +32,42 @@ class ConversationContextBuilder
         $systemPrompt = (string) ($config->get('ai.system_prompt') ?? config('ai.default_system_prompt'));
         $model = (string) ($config->get('ai.model') ?? config('ai.default_model'));
 
-        $stageName = $conversation->lead->pipelineStage->name;
+        $currentStage = $conversation->lead->pipelineStage;
         $summary = $conversation->summary ?? 'Sem resumo anterior.';
+
+        $lastCustomerMessage = Message::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('origin', MessageOrigin::Customer)
+            ->orderByDesc('sent_at')
+            ->first();
+
+        $knowledgeContext = '';
+        if ($lastCustomerMessage !== null) {
+            $knowledgeContext = trim($this->knowledgeContextBuilder->build(
+                $conversation->company_id,
+                $lastCustomerMessage->content,
+            ));
+        }
+
+        $stagesContext = $this->pipelineStageService->buildAiContextBlock(
+            $conversation->company_id,
+            $currentStage,
+        );
+
+        $systemContent = "{$systemPrompt}\n\n{$stagesContext}\n\nResumo da conversa: {$summary}\nModelo: {$model}";
+
+        if ($this->hasExternalIntegration($conversation->company_id)) {
+            $systemContent .= "\n\n".trim((string) config('ai.external_tools_system_prompt'));
+        }
+
+        if ($knowledgeContext !== '') {
+            $systemContent .= "\n\n--- Base de Conhecimento ---\n{$knowledgeContext}";
+        }
 
         $messages = [
             new AiChatMessage(
                 role: 'system',
-                content: "{$systemPrompt}\n\nEstágio atual do lead: {$stageName}.\nResumo da conversa: {$summary}\nModelo: {$model}",
+                content: $systemContent,
             ),
         ];
 
@@ -54,5 +90,10 @@ class ConversationContextBuilder
         }
 
         return $messages;
+    }
+
+    private function hasExternalIntegration(int $companyId): bool
+    {
+        return $this->companyIntegrationResolver->resolve($companyId) !== null;
     }
 }

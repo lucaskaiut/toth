@@ -30,7 +30,7 @@ export function AuthFormCard({
         <p className="mt-2 text-sm text-muted">{description}</p>
       </div>
 
-      <div className="rounded-xl bg-surface-elevated p-6 ring-1 ring-border">
+      <div className="rounded-xl bg-surface-elevated p-6 shadow-lg">
         {children}
       </div>
 

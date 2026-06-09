@@ -24,6 +24,8 @@ class PipelineStage extends Model
         'name',
         'slug',
         'position',
+        'description',
+        'ai_instruction',
     ];
 
     protected function casts(): array

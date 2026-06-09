@@ -4,27 +4,75 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
-  --color-surface: #f8fafc;
+  --color-surface: #e8edf3;
   --color-surface-elevated: #ffffff;
-  --color-surface-muted: #f1f5f9;
+  --color-surface-muted: #dce3ec;
+  --color-surface-inset: #f3f6fa;
+  --color-panel: #ffffff;
 
-  --color-foreground: #0f172a;
-  --color-muted: #64748b;
+  --color-foreground: #0b1220;
+  --color-muted: #4b5568;
 
-  --color-border: #e2e8f0;
-
-  --color-primary: #4f46e5;
-  --color-primary-hover: #4338ca;
+  --color-primary: #4338ca;
+  --color-primary-hover: #3730a3;
   --color-primary-foreground: #ffffff;
 
-  --color-danger: #e11d48;
-  --color-danger-subtle: #fff1f2;
+  --color-danger: #dc2626;
+  --color-danger-subtle: #fef2f2;
 
-  --color-success: #059669;
+  --color-success: #047857;
   --color-success-subtle: #ecfdf5;
+
+  --shadow-xs: 0 1px 2px rgba(11, 18, 32, 0.07);
+  --shadow-sm: 0 1px 3px rgba(11, 18, 32, 0.1), 0 1px 2px rgba(11, 18, 32, 0.06);
+  --shadow-md: 0 4px 14px rgba(11, 18, 32, 0.1), 0 2px 6px rgba(11, 18, 32, 0.06);
+  --shadow-lg: 0 12px 28px rgba(11, 18, 32, 0.12), 0 4px 10px rgba(11, 18, 32, 0.06);
+  --shadow-xl: 0 20px 40px rgba(11, 18, 32, 0.14);
 }
 
 html,
 body {
   @apply bg-surface font-sans text-foreground antialiased;
+}
+
+@layer components {
+  .ui-panel {
+    @apply rounded-xl bg-surface-elevated shadow-md;
+  }
+
+  .ui-panel-soft {
+    @apply rounded-xl bg-surface-inset shadow-sm;
+  }
+
+  .ui-page-header {
+    @apply bg-surface-elevated px-6 py-4 shadow-sm;
+  }
+
+  .ui-sidebar {
+    @apply bg-surface-elevated shadow-lg;
+  }
+
+  .ui-field {
+    @apply h-10 w-full rounded-lg bg-surface-elevated px-3 text-sm text-foreground shadow-sm transition-shadow placeholder:text-muted/80 focus:outline-none focus:shadow-md focus:ring-2 focus:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .ui-field-error {
+    @apply ring-2 ring-danger/40;
+  }
+
+  .ui-textarea {
+    @apply w-full rounded-lg bg-surface-elevated px-3 py-2 text-sm text-foreground shadow-sm transition-shadow placeholder:text-muted/80 focus:outline-none focus:shadow-md focus:ring-2 focus:ring-primary/25;
+  }
+
+  .ui-chip {
+    @apply rounded-full bg-surface-muted px-2.5 py-1 text-xs font-medium text-muted shadow-xs;
+  }
+
+  .ui-nav-link {
+    @apply block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-muted transition-all hover:bg-surface-muted hover:text-foreground hover:shadow-xs;
+  }
+
+  .ui-nav-link-active {
+    @apply bg-primary text-primary-foreground shadow-md hover:bg-primary-hover hover:text-primary-foreground;
+  }
 }

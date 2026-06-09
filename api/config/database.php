@@ -99,6 +99,20 @@ return [
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
+        'vector' => [
+            'driver' => 'pgsql',
+            'host' => env('VECTOR_DB_HOST', 'postgres-vector'),
+            'port' => env('VECTOR_DB_PORT', '5432'),
+            'database' => env('VECTOR_DB_DATABASE', 'toth_vectors'),
+            'username' => env('VECTOR_DB_USERNAME', 'toth'),
+            'password' => env('VECTOR_DB_PASSWORD', 'secret'),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),

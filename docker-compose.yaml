@@ -26,6 +26,23 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      postgres-vector:
+        condition: service_healthy
+    restart: unless-stopped
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: toth-queue
+    working_dir: /var/www/html
+    volumes:
+      - ./api:/var/www/html
+    command: php artisan queue:work redis --queue=default,redis --sleep=1 --tries=3 --timeout=300
+    depends_on:
+      - api
+      - redis
+      - postgres-vector
     restart: unless-stopped
 
   reverb:
@@ -85,6 +102,26 @@ services:
       - redis_data:/data
     restart: unless-stopped
 
+  postgres-vector:
+    image: pgvector/pgvector:pg16
+    container_name: toth-postgres-vector
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: toth_vectors
+      POSTGRES_USER: toth
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - postgres_vector_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-pgvector.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U toth -d toth_vectors"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
   mailhog:
     image: mailhog/mailhog:v1.0.1
     container_name: toth-mailhog
@@ -97,3 +134,4 @@ volumes:
   web_node_modules:
   mysql_data:
   redis_data:
+  postgres_vector_data:

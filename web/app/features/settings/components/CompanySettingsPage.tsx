@@ -94,6 +94,19 @@ export function CompanySettingsPage() {
     [rows],
   );
 
+  const integrationEnabled = useMemo(
+    () => rows.find((r) => r.key === "integration.enabled")?.value === "true",
+    [rows],
+  );
+  const integrationProvider = useMemo(
+    () => rows.find((r) => r.key === "integration.provider")?.value ?? "nox",
+    [rows],
+  );
+  const integrationApiToken = useMemo(
+    () => rows.find((r) => r.key === "integration.api_token")?.value ?? "",
+    [rows],
+  );
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -131,7 +144,7 @@ export function CompanySettingsPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="border-b border-border px-6 py-4">
+      <header className="ui-page-header">
         <h1 className="text-xl font-semibold">Configurações</h1>
         <p className="text-sm text-muted">
           Configure integrações e parâmetros da sua empresa.
@@ -143,7 +156,7 @@ export function CompanySettingsPage() {
           {successMessage ? <Alert variant="success">{successMessage}</Alert> : null}
           {errorMessage ? <Alert variant="error">{errorMessage}</Alert> : null}
 
-          <section className="rounded-xl border border-border bg-panel p-5">
+          <section className="ui-panel p-5">
             <div className="mb-4">
               <h2 className="text-base font-semibold">IA</h2>
               <p className="text-sm text-muted">
@@ -196,7 +209,7 @@ export function CompanySettingsPage() {
               >
                 <textarea
                   id="ai.system_prompt"
-                  className="min-h-32 w-full resize-y rounded-lg bg-surface-elevated px-3 py-2 text-sm text-foreground ring-1 ring-border transition-colors placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                  className="ui-textarea min-h-32 resize-y"
                   value={aiSystemPrompt}
                   onChange={(e) =>
                     setRows((current) =>
@@ -212,7 +225,86 @@ export function CompanySettingsPage() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-border bg-panel p-5">
+          <section className="ui-panel p-5">
+            <div className="mb-4">
+              <h2 className="text-base font-semibold">Integração externa</h2>
+              <p className="text-sm text-muted">
+                Conecte sistemas como o Nox para que a IA execute ações de negócio durante o atendimento.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <FormField
+                id="integration.enabled"
+                label="Habilitar integração"
+                hint="Quando ativo, a IA poderá usar ferramentas do sistema externo."
+              >
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    id="integration.enabled"
+                    type="checkbox"
+                    checked={integrationEnabled}
+                    onChange={(e) =>
+                      setRows((current) =>
+                        upsertRow(current, "integration.enabled", {
+                          key: "integration.enabled",
+                          type: "bool",
+                          value: e.target.checked ? "true" : "false",
+                        }),
+                      )
+                    }
+                  />
+                  Integração habilitada
+                </label>
+              </FormField>
+
+              <FormField
+                id="integration.provider"
+                label="Sistema"
+                hint="Provedor de ferramentas externas."
+              >
+                <select
+                  id="integration.provider"
+                  value={integrationProvider}
+                  onChange={(e) =>
+                    setRows((current) =>
+                      upsertRow(current, "integration.provider", {
+                        key: "integration.provider",
+                        type: "string",
+                        value: e.target.value,
+                      }),
+                    )
+                  }
+                  className="ui-field px-2"
+                >
+                  <option value="nox">Nox Scheduler</option>
+                </select>
+              </FormField>
+
+              <FormField
+                id="integration.api_token"
+                label="Token de API"
+                hint="Token de autenticação do Nox. A empresa é resolvida automaticamente a partir do token."
+              >
+                <Input
+                  id="integration.api_token"
+                  type="password"
+                  value={integrationApiToken}
+                  onChange={(e) =>
+                    setRows((current) =>
+                      upsertRow(current, "integration.api_token", {
+                        key: "integration.api_token",
+                        type: "string",
+                        value: e.target.value,
+                      }),
+                    )
+                  }
+                />
+              </FormField>
+            </div>
+          </section>
+
+          <section className="ui-panel p-5">
             <div className="mb-4 flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-base font-semibold">Avançado</h2>
@@ -267,7 +359,7 @@ export function CompanySettingsPage() {
                             return next;
                           })
                         }
-                        className="h-10 w-full rounded-lg bg-surface-elevated px-2 text-sm text-foreground ring-1 ring-border focus:outline-none focus:ring-2 focus:ring-primary/25"
+                        className="ui-field px-2"
                       >
                         {typeOptions.map((t) => (
                           <option key={t} value={t}>
@@ -307,7 +399,7 @@ export function CompanySettingsPage() {
                 ))
               )}
 
-              <div className="mt-3 grid grid-cols-12 gap-2 border-t border-border pt-3">
+              <div className="mt-3 grid grid-cols-12 gap-2 pt-3 shadow-[inset_0_1px_0_rgba(11,18,32,0.06)]">
                 <div className="col-span-5">
                   <Input
                     value={newKey}
@@ -319,7 +411,7 @@ export function CompanySettingsPage() {
                   <select
                     value={newType}
                     onChange={(e) => setNewType(e.target.value as CompanyConfigType)}
-                    className="h-10 w-full rounded-lg bg-surface-elevated px-2 text-sm text-foreground ring-1 ring-border focus:outline-none focus:ring-2 focus:ring-primary/25"
+                    className="ui-field px-2"
                   >
                     {typeOptions.map((t) => (
                       <option key={t} value={t}>

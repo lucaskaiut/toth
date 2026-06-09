@@ -59,6 +59,12 @@ class ConversationService
 
     public function updateSummary(Conversation $conversation, string $summary): Conversation
     {
+        $maxLength = (int) config('ai.summary_max_length', 800);
+
+        if ($maxLength > 0 && mb_strlen($summary) > $maxLength) {
+            $summary = mb_substr($summary, 0, $maxLength);
+        }
+
         $conversation->summary = $summary;
         $conversation->save();
 

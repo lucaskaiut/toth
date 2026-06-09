@@ -142,7 +142,7 @@ export function ChatPanel({ conversation }: ChatPanelProps) {
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <header className="border-b border-border px-6 py-4">
+      <header className="ui-page-header">
         <h2 className="text-lg font-semibold">{conversation.lead?.name}</h2>
         <p className="text-sm text-muted">{conversation.lead?.phone}</p>
         {conversation.summary ? (
@@ -172,7 +172,7 @@ export function ChatPanel({ conversation }: ChatPanelProps) {
       </div>
 
       <form
-        className="flex gap-2 border-t border-border px-6 py-4"
+        className="flex gap-2 bg-surface-elevated px-6 py-4 shadow-[0_-4px_16px_rgba(11,18,32,0.06)]"
         onSubmit={(event) => {
           event.preventDefault();
 

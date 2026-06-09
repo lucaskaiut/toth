@@ -43,7 +43,7 @@ export function ConversationAttendanceControls({
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
-      <span className="rounded-full bg-surface-elevated px-2 py-1 text-xs text-muted ring-1 ring-border">
+      <span className="ui-chip">
         {conversation.attendance_status_label ?? conversation.attendance_status}
       </span>
 

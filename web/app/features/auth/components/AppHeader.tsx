@@ -5,7 +5,7 @@ export function AppHeader() {
   const { user, logout } = useAuth();
 
   return (
-    <header className="border-b border-border bg-surface-elevated">
+    <header className="ui-page-header shadow-sm">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold tracking-tight text-foreground">

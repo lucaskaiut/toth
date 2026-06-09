@@ -118,6 +118,31 @@ class LeadService
         return $this->moveToStage($lead, $stage);
     }
 
+    /**
+     * Movimentação automática pela IA: ignora slug ausente/inválido e bloqueia regressão no funil.
+     */
+    public function moveToStageBySlugForAi(Lead $lead, ?string $slug): Lead
+    {
+        if ($slug === null || $slug === '') {
+            return $lead;
+        }
+
+        $stage = $this->pipelineStageService->findBySlug($lead->company_id, $slug);
+
+        if ($stage === null) {
+            return $lead;
+        }
+
+        $lead->loadMissing('pipelineStage');
+        $current = $lead->pipelineStage;
+
+        if ($current !== null && $stage->position < $current->position) {
+            return $lead;
+        }
+
+        return $this->moveToStage($lead, $stage);
+    }
+
     private function normalizePhone(string $phone): string
     {
         return preg_replace('/\D+/', '', $phone) ?? $phone;

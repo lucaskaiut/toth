@@ -61,7 +61,7 @@ export function WhatsAppSetupPage() {
         : null;
 
   return (
-    <div className="flex flex-col gap-6 rounded-xl border border-border bg-panel p-6 shadow-sm">
+    <div className="ui-panel flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-xl font-semibold text-foreground">
           Conectar WhatsApp
@@ -93,7 +93,7 @@ export function WhatsAppSetupPage() {
                 : `data:image/png;base64,${qrBase64}`
             }
             alt="QR Code WhatsApp"
-            className="h-64 w-64 rounded-lg border border-border bg-white p-2"
+            className="h-64 w-64 rounded-lg bg-white p-2 shadow-md"
           />
         </div>
       ) : null}

@@ -33,7 +33,9 @@ export async function apiRequest<T>(
   const requestHeaders = new Headers(headers);
   requestHeaders.set("Accept", "application/json");
 
-  if (body !== undefined) {
+  const isFormData = body instanceof FormData;
+
+  if (body !== undefined && !isFormData) {
     requestHeaders.set("Content-Type", "application/json");
   }
 
@@ -47,7 +49,8 @@ export async function apiRequest<T>(
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
     headers: requestHeaders,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body:
+      body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
   });
 
   if (response.status === 401 && !skipUnauthorizedHandler) {

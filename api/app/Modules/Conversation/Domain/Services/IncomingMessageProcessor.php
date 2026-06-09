@@ -79,17 +79,9 @@ class IncomingMessageProcessor
                     return;
                 }
 
-                // Debounce: aguarda uma janela sem novas mensagens do cliente antes de acionar a IA.
-                $min = (int) config('ai.debounce_min_seconds', 8);
-                $max = (int) config('ai.debounce_max_seconds', 15);
-                if ($min < 0) {
-                    $min = 0;
-                }
-                if ($max < $min) {
-                    $max = $min;
-                }
+                // Debounce fixo: aguarda N segundos sem novas mensagens do cliente antes de acionar a IA.
+                $delaySeconds = max(0, (int) config('ai.debounce_seconds', 10));
 
-                $delaySeconds = random_int($min, $max);
                 Cache::put(
                     "ai_debounce_until:{$companyId}:{$conversation->id}",
                     now()->addSeconds($delaySeconds),

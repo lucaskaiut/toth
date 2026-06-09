@@ -29,8 +29,28 @@ enum DefaultPipelineStage: string
         };
     }
 
+    public function description(): string
+    {
+        return match ($this) {
+            self::NovoLead => 'Primeiro contato sem contexto suficiente.',
+            self::Qualificacao => 'Necessidade identificada e triagem em andamento.',
+            self::Proposta => 'Cliente demonstrou intenção comercial concreta.',
+            self::Fechado => 'Atendimento ou contratação confirmada.',
+        };
+    }
+
+    public function aiInstruction(): string
+    {
+        return match ($this) {
+            self::NovoLead => 'Use quando ainda não houver informação suficiente para qualificação.',
+            self::Qualificacao => 'Use quando o cliente estiver explicando necessidade e coletando informações.',
+            self::Proposta => 'Use quando houver solicitação de valores, orçamento ou agendamento.',
+            self::Fechado => 'Use quando houver confirmação explícita do serviço.',
+        };
+    }
+
     /**
-     * @return list<array{slug: string, name: string, position: int}>
+     * @return list<array{slug: string, name: string, position: int, description: string, ai_instruction: string}>
      */
     public static function definitions(): array
     {
@@ -39,6 +59,8 @@ enum DefaultPipelineStage: string
                 'slug' => $stage->value,
                 'name' => $stage->label(),
                 'position' => $stage->position(),
+                'description' => $stage->description(),
+                'ai_instruction' => $stage->aiInstruction(),
             ],
             self::cases(),
         );

@@ -15,15 +15,13 @@ export function KanbanColumn({ stage, leads }: KanbanColumnProps) {
     <section
       ref={setNodeRef}
       className={[
-        "flex min-h-[70vh] w-72 shrink-0 flex-col rounded-xl border border-border bg-surface p-3",
-        isOver ? "ring-2 ring-primary" : "",
+        "flex min-h-[70vh] w-72 shrink-0 flex-col rounded-xl bg-surface-inset p-3 shadow-md",
+        isOver ? "shadow-lg ring-2 ring-primary/30" : "",
       ].join(" ")}
     >
       <header className="mb-3 flex items-center justify-between">
         <h2 className="font-semibold">{stage.name}</h2>
-        <span className="rounded-full bg-surface-elevated px-2 py-0.5 text-xs text-muted">
-          {leads.length}
-        </span>
+        <span className="ui-chip">{leads.length}</span>
       </header>
 
       <SortableContext items={leads.map((lead) => lead.id)} strategy={verticalListSortingStrategy}>

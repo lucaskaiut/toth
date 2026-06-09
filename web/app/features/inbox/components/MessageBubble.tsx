@@ -28,8 +28,8 @@ export function MessageBubble({ message, onRetry }: MessageBubbleProps) {
         className={[
           "max-w-[75%] rounded-2xl px-4 py-2 text-sm",
           isCustomer
-            ? "bg-surface-elevated text-foreground"
-            : "bg-primary text-primary-foreground",
+            ? "bg-surface-elevated text-foreground shadow-md"
+            : "bg-primary text-primary-foreground shadow-md",
         ].join(" ")}
       >
         <p className="mb-1 text-[10px] uppercase tracking-wide opacity-70">

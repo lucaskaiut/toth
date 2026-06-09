@@ -54,7 +54,7 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            'channels' => explode(',', (string) env('LOG_STACK', 'single,horus')),
             'ignore_exceptions' => false,
         ],
 
@@ -71,6 +71,16 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,
+        ],
+
+        'horus' => [
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'debug'),
+            'handler' => \App\Core\Logging\Monolog\HorusLogHandler::class,
+            'handler_with' => [
+                // Handler lê config('horus.*')
+            ],
+            'processors' => [PsrLogMessageProcessor::class],
         ],
 
         'slack' => [

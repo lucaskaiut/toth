@@ -5,6 +5,8 @@ export type PipelineStage = {
   name: string;
   slug: string;
   position: number;
+  description: string;
+  ai_instruction: string | null;
 };
 
 export type Lead = {

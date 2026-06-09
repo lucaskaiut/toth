@@ -29,6 +29,7 @@ class EvolutionWebhookParser
             return null;
         }
 
+        // Ignora outbound (fromMe): evita loop IA → WhatsApp → webhook → IA.
         if (($key['fromMe'] ?? $data['fromMe'] ?? false) === true) {
             return null;
         }

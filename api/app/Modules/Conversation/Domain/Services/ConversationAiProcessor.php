@@ -9,6 +9,8 @@ use App\Core\Whatsapp\DTOs\OutgoingWhatsAppMessage;
 use App\Modules\CompanyConfig\Domain\Services\CompanyConfigResolver;
 use App\Modules\Conversation\Domain\Enums\MessageOrigin;
 use App\Modules\Conversation\Domain\Models\Conversation;
+use App\Modules\ExternalIntegration\Domain\Services\ExternalToolService;
+use App\Modules\IntegrationLog\Domain\Services\IntegrationLogService;
 use App\Modules\Lead\Domain\Services\LeadService;
 use App\Modules\Realtime\Events\LeadStageChanged;
 use App\Modules\Realtime\Events\MessageCreated;
@@ -22,6 +24,9 @@ class ConversationAiProcessor
         private readonly ConversationService $conversationService,
         private readonly LeadService $leadService,
         private readonly AiClient $aiClient,
+        private readonly ConversationAiToolRunner $conversationAiToolRunner,
+        private readonly ExternalToolService $externalToolService,
+        private readonly IntegrationLogService $integrationLogService,
         private readonly WhatsAppClient $whatsAppClient,
     ) {}
 
@@ -45,33 +50,55 @@ class ConversationAiProcessor
 
         $messages = $this->contextBuilder->build($conversation);
 
-        $aiResponse = $this->aiClient->chat(new AiChatRequest(
+        $hasExternalTools = $this->externalToolService->connectionForCompany($companyId) !== null;
+
+        $chatRequest = new AiChatRequest(
             model: $model,
             apiKey: $apiKey,
             messages: $messages,
-        ));
+            companyId: $companyId,
+        );
+
+        if ($hasExternalTools) {
+            try {
+                $aiResponse = $this->conversationAiToolRunner->run($companyId, $model, $apiKey, $messages);
+            } catch (\Throwable $exception) {
+                $this->integrationLogService->error(
+                    integration: 'external:tools',
+                    action: 'conversation_run',
+                    message: $exception->getMessage(),
+                    companyId: $companyId,
+                );
+
+                $aiResponse = $this->aiClient->chat($chatRequest);
+            }
+        } else {
+            $aiResponse = $this->aiClient->chat($chatRequest);
+        }
 
         DB::transaction(function () use ($conversation, $aiResponse, $companyId, $config) {
-            $aiMessage = $this->messageService->store(
-                $conversation,
-                MessageOrigin::Ai,
-                $aiResponse->message,
-            );
-
             $this->conversationService->updateSummary($conversation, $aiResponse->summary);
 
             $previousStageId = $conversation->lead->pipeline_stage_id;
-            $lead = $this->leadService->moveToStageBySlug($conversation->lead, $aiResponse->suggestedStage);
+            $lead = $this->leadService->moveToStageBySlugForAi($conversation->lead, $aiResponse->suggestedStage);
             $conversation->setRelation('lead', $lead);
 
-            broadcast(new MessageCreated($companyId, $aiMessage))->toOthers();
+            if ($aiResponse->shouldReply && $aiResponse->message !== '') {
+                $aiMessage = $this->messageService->store(
+                    $conversation,
+                    MessageOrigin::Ai,
+                    $aiResponse->message,
+                );
+
+                broadcast(new MessageCreated($companyId, $aiMessage))->toOthers();
+                $this->sendWhatsApp($lead->phone, $aiResponse->message, $config);
+            }
+
             broadcast(new \App\Modules\Realtime\Events\ConversationUpdated($companyId, $conversation->fresh(['lead.pipelineStage'])))->toOthers();
 
             if ($previousStageId !== $lead->pipeline_stage_id) {
                 broadcast(new LeadStageChanged($companyId, $lead))->toOthers();
             }
-
-            $this->sendWhatsApp($lead->phone, $aiResponse->message, $config);
         });
     }
 

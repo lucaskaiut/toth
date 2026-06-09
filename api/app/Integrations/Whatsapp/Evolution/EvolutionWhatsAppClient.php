@@ -27,13 +27,39 @@ class EvolutionWhatsAppClient implements WhatsAppClient
     public function send(OutgoingWhatsAppMessage $message): SendMessageResult
     {
         $number = $this->formatNumber($message->phone);
+        $url = $this->buildUrl("/message/sendText/{$message->instanceName}");
+        $headers = $this->requestHeaders();
+        $body = [
+            'number' => $number,
+            'text' => $message->content,
+        ];
 
         try {
+            $this->integrationLogService->info(
+                integration: 'whatsapp',
+                action: 'send',
+                message: 'Evolution sendText request',
+                context: [
+                    'url' => $url,
+                    'headers' => $this->sanitizeHeadersForLog($headers),
+                    'body' => $body,
+                ],
+            );
+
             $response = $this->http()
-                ->post("{$this->baseUrl}/message/sendText/{$message->instanceName}", [
-                    'number' => $number,
-                    'text' => $message->content,
-                ]);
+                ->post($url, $body);
+
+            $this->integrationLogService->info(
+                integration: 'whatsapp',
+                action: 'send',
+                message: 'Evolution sendText response',
+                context: [
+                    'url' => $url,
+                    'status' => $response->status(),
+                    'reason' => $response->reason(),
+                    'response_body' => $response->json() ?? $response->body(),
+                ],
+            );
 
             if (! $response->successful()) {
                 $this->integrationLogService->error(
@@ -41,6 +67,7 @@ class EvolutionWhatsAppClient implements WhatsAppClient
                     action: 'send',
                     message: 'Falha ao enviar mensagem WhatsApp.',
                     context: [
+                        'url' => $url,
                         'status' => $response->status(),
                         'body' => $response->json() ?? $response->body(),
                         'phone' => $message->phone,
@@ -149,8 +176,32 @@ class EvolutionWhatsAppClient implements WhatsAppClient
 
     public function connectInstance(string $instanceName): WhatsAppConnectResult
     {
+        $url = $this->buildUrl("/instance/connect/{$instanceName}");
+
         try {
-            $response = $this->http()->get("{$this->baseUrl}/instance/connect/{$instanceName}");
+            $this->integrationLogService->info(
+                integration: 'whatsapp',
+                action: 'connect_instance',
+                message: 'Evolution connect request',
+                context: [
+                    'url' => $url,
+                    'headers' => $this->sanitizeHeadersForLog($this->requestHeaders()),
+                ],
+            );
+
+            $response = $this->http()->get($url);
+
+            $this->integrationLogService->info(
+                integration: 'whatsapp',
+                action: 'connect_instance',
+                message: 'Evolution connect response',
+                context: [
+                    'url' => $url,
+                    'status' => $response->status(),
+                    'reason' => $response->reason(),
+                    'response_body' => $response->json() ?? $response->body(),
+                ],
+            );
 
             if (! $response->successful()) {
                 $this->logError('connect_instance', $response->status(), $response->json() ?? $response->body());
@@ -188,8 +239,32 @@ class EvolutionWhatsAppClient implements WhatsAppClient
 
     public function getConnectionState(string $instanceName): WhatsAppConnectionStateResult
     {
+        $url = $this->buildUrl("/instance/connectionState/{$instanceName}");
+
         try {
-            $response = $this->http()->get("{$this->baseUrl}/instance/connectionState/{$instanceName}");
+            $this->integrationLogService->info(
+                integration: 'whatsapp',
+                action: 'connection_state',
+                message: 'Evolution connectionState request',
+                context: [
+                    'url' => $url,
+                    'headers' => $this->sanitizeHeadersForLog($this->requestHeaders()),
+                ],
+            );
+
+            $response = $this->http()->get($url);
+
+            $this->integrationLogService->info(
+                integration: 'whatsapp',
+                action: 'connection_state',
+                message: 'Evolution connectionState response',
+                context: [
+                    'url' => $url,
+                    'status' => $response->status(),
+                    'reason' => $response->reason(),
+                    'response_body' => $response->json() ?? $response->body(),
+                ],
+            );
 
             if (! $response->successful()) {
                 $this->logError('connection_state', $response->status(), $response->json() ?? $response->body());

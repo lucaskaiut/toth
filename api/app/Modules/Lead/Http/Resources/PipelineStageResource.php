@@ -19,6 +19,8 @@ class PipelineStageResource extends JsonResource
             'name' => $this->name,
             'slug' => $this->slug,
             'position' => $this->position,
+            'description' => $this->description,
+            'ai_instruction' => $this->ai_instruction,
         ];
     }
 }

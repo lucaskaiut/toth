@@ -7,6 +7,8 @@ use App\Modules\Company\Http\Controllers\CompanyWhatsAppSetupController;
 use App\Modules\CompanyConfig\Http\Controllers\CompanyConfigController;
 use App\Modules\Conversation\Http\Controllers\ConversationController;
 use App\Modules\Lead\Http\Controllers\LeadController;
+use App\Modules\Knowledge\Http\Controllers\KnowledgeSearchController;
+use App\Modules\Knowledge\Http\Controllers\KnowledgeSourceController;
 use App\Modules\Lead\Http\Controllers\PipelineStageController;
 use App\Modules\Whatsapp\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Broadcast;
@@ -26,6 +28,10 @@ Route::middleware(['auth:sanctum', 'company'])->group(function () {
 
     Route::middleware(['company.active'])->group(function () {
     Route::get('/pipeline/stages', [PipelineStageController::class, 'index']);
+    Route::post('/pipeline/stages', [PipelineStageController::class, 'store']);
+    Route::patch('/pipeline/stages/reorder', [PipelineStageController::class, 'reorder']);
+    Route::put('/pipeline/stages/{stage}', [PipelineStageController::class, 'update']);
+    Route::delete('/pipeline/stages/{stage}', [PipelineStageController::class, 'destroy']);
     Route::get('/leads', [LeadController::class, 'index']);
     Route::get('/leads/{lead}', [LeadController::class, 'show']);
     Route::put('/leads/{lead}', [LeadController::class, 'update']);
@@ -39,5 +45,18 @@ Route::middleware(['auth:sanctum', 'company'])->group(function () {
 
     Route::get('/company-configs', [CompanyConfigController::class, 'index']);
     Route::put('/company-configs', [CompanyConfigController::class, 'update']);
+
+    Route::prefix('knowledge')->group(function () {
+        Route::get('/sources', [KnowledgeSourceController::class, 'index']);
+        Route::post('/sources', [KnowledgeSourceController::class, 'store']);
+        Route::put('/sources/{knowledgeSource}', [KnowledgeSourceController::class, 'update']);
+        Route::delete('/sources/{knowledgeSource}', [KnowledgeSourceController::class, 'destroy']);
+        Route::post('/sources/documents', [KnowledgeSourceController::class, 'storeDocument']);
+        Route::post('/sources/{knowledgeSource}/reindex', [KnowledgeSourceController::class, 'reindex']);
+        Route::post('/reindex-all', [KnowledgeSourceController::class, 'reindexAll']);
+        Route::get('/stats', [KnowledgeSourceController::class, 'stats']);
+        Route::post('/search', [KnowledgeSearchController::class, 'search']);
+        Route::post('/context', [KnowledgeSearchController::class, 'context']);
+    });
     });
 });

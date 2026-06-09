@@ -23,6 +23,8 @@ class PipelineStageFactory extends Factory
             'name' => $stage->label(),
             'slug' => $stage->value,
             'position' => $stage->position(),
+            'description' => $stage->description(),
+            'ai_instruction' => $stage->aiInstruction(),
         ];
     }
 }
