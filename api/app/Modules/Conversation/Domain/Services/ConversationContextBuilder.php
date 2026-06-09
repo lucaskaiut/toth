@@ -67,6 +67,8 @@ class ConversationContextBuilder
             $systemContent .= "\n\n--- Base de Conhecimento ---\n{$knowledgeContext}";
         }
 
+        $systemContent .= "\n\n".trim((string) config('ai.response_format_instructions'));
+
         $messages = [
             new AiChatMessage(
                 role: 'system',
@@ -77,6 +79,24 @@ class ConversationContextBuilder
         $recentLimit = (int) config('ai.recent_messages_limit');
         $recentMessages = $this->messageService->recentForConversation($conversation, $recentLimit);
 
+        foreach ($this->groupConsecutiveTurns($recentMessages) as $turn) {
+            $messages[] = new AiChatMessage(
+                role: $turn['role'],
+                content: $turn['content'],
+            );
+        }
+
+        return $messages;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Message>  $recentMessages
+     * @return list<array{role: string, content: string}>
+     */
+    private function groupConsecutiveTurns($recentMessages): array
+    {
+        $turns = [];
+
         foreach ($recentMessages as $message) {
             $role = match ($message->origin) {
                 MessageOrigin::Customer => 'user',
@@ -85,14 +105,19 @@ class ConversationContextBuilder
             };
 
             $prefix = $message->origin === MessageOrigin::User ? '[Atendente humano] ' : '';
+            $content = $prefix.$message->content;
 
-            $messages[] = new AiChatMessage(
-                role: $role,
-                content: $prefix.$message->content,
-            );
+            if ($turns !== [] && $turns[array_key_last($turns)]['role'] === $role) {
+                $turns[array_key_last($turns)]['content'] .= "\n".$content;
+            } else {
+                $turns[] = [
+                    'role' => $role,
+                    'content' => $content,
+                ];
+            }
         }
 
-        return $messages;
+        return $turns;
     }
 
     private function hasExternalIntegration(int $companyId): bool

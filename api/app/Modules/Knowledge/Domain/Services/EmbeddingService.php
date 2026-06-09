@@ -2,24 +2,43 @@
 
 namespace App\Modules\Knowledge\Domain\Services;
 
-use App\Core\Embedding\Contracts\EmbeddingProviderInterface;
+use App\Integrations\Embedding\OpenAIEmbeddingProvider;
+use App\Modules\CompanyConfig\Domain\Services\CompanyAiConfigResolver;
+use RuntimeException;
 
 class EmbeddingService
 {
     public function __construct(
-        private readonly EmbeddingProviderInterface $provider,
+        private readonly CompanyAiConfigResolver $companyAiConfigResolver,
     ) {}
 
     /**
      * @return list<float>
      */
-    public function embed(string $text): array
+    public function embedForCompany(int $companyId, string $text): array
     {
-        return $this->provider->embed($text);
+        $config = $this->companyAiConfigResolver->resolve($companyId);
+
+        if (! $config->hasEmbeddingCredentials()) {
+            throw new RuntimeException('Configuração de embedding incompleta para a empresa.');
+        }
+
+        return $this->makeProvider($config->baseUrl, $config->apiKey, $config->embeddingModel)->embed($text);
     }
 
     public function dimensions(): int
     {
-        return $this->provider->dimensions();
+        return (int) config('embedding.dimensions', 768);
+    }
+
+    private function makeProvider(string $baseUrl, string $apiKey, string $model): OpenAIEmbeddingProvider
+    {
+        return new OpenAIEmbeddingProvider(
+            baseUrl: $baseUrl,
+            apiKey: $apiKey,
+            model: $model,
+            timeout: (int) config('embedding.openai.timeout', 120),
+            dimensions: $this->dimensions(),
+        );
     }
 }

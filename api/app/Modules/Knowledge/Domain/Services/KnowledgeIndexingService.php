@@ -118,7 +118,7 @@ class KnowledgeIndexingService
                     continue;
                 }
 
-                $embedding = $this->embeddingService->embed($chunkContent);
+                $embedding = $this->embeddingService->embedForCompany($source->company_id, $chunkContent);
                 $vectorId = $this->vectorRepository->upsert(
                     $source->company_id,
                     $chunk->id,

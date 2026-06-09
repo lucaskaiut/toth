@@ -28,7 +28,7 @@ class RetrievalService
             return [];
         }
 
-        $queryEmbedding = $this->embeddingService->embed($query);
+        $queryEmbedding = $this->embeddingService->embedForCompany($companyId, $query);
         $matches = $this->vectorRepository->searchSimilar($companyId, $queryEmbedding, $limit);
 
         if ($matches === []) {

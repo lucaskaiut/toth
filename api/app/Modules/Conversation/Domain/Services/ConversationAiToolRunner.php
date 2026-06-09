@@ -7,6 +7,7 @@ use App\Core\AI\DTOs\AiChatMessage;
 use App\Core\AI\DTOs\AiChatRequest;
 use App\Core\AI\DTOs\AiStructuredResponse;
 use App\Core\AI\DTOs\AiToolCall;
+use App\Core\AI\Support\AiStructuredResponseParser;
 use App\Modules\ExternalIntegration\Domain\Services\ExternalToolService;
 use InvalidArgumentException;
 
@@ -15,6 +16,7 @@ class ConversationAiToolRunner
     public function __construct(
         private readonly AiClient $aiClient,
         private readonly ExternalToolService $externalToolService,
+        private readonly AiStructuredResponseParser $structuredResponseParser = new AiStructuredResponseParser,
     ) {}
 
     /**
@@ -49,7 +51,7 @@ class ConversationAiToolRunner
             ));
 
             if (! $completion->hasToolCalls()) {
-                return $this->parseStructuredContent($completion->content);
+                return $this->structuredResponseParser->parse($completion->content);
             }
 
             $messages[] = new AiChatMessage(
@@ -91,51 +93,4 @@ class ConversationAiToolRunner
         return $result->toToolMessageContent();
     }
 
-    private function parseStructuredContent(string $content): AiStructuredResponse
-    {
-        $decoded = json_decode($content, true);
-
-        if (! is_array($decoded)) {
-            throw new InvalidArgumentException('Resposta da IA não está em formato JSON válido.');
-        }
-
-        $shouldReply = $this->parseShouldReply($decoded);
-        $message = trim((string) ($decoded['message'] ?? $decoded['resposta'] ?? ''));
-        $stageRaw = $decoded['suggested_stage'] ?? $decoded['estagio'] ?? null;
-        $stage = is_string($stageRaw) && trim($stageRaw) !== '' ? trim($stageRaw) : null;
-        $summary = trim((string) ($decoded['summary'] ?? $decoded['resumo'] ?? ''));
-
-        if ($shouldReply && $message === '') {
-            throw new InvalidArgumentException('Resposta da IA não contém mensagem.');
-        }
-
-        return new AiStructuredResponse(
-            message: $message,
-            suggestedStage: $stage,
-            summary: $summary,
-            shouldReply: $shouldReply,
-        );
-    }
-
-    /**
-     * @param  array<string, mixed>  $decoded
-     */
-    private function parseShouldReply(array $decoded): bool
-    {
-        if (! array_key_exists('should_reply', $decoded)) {
-            return true;
-        }
-
-        $value = $decoded['should_reply'];
-
-        if (is_bool($value)) {
-            return $value;
-        }
-
-        if (is_string($value)) {
-            return ! in_array(strtolower(trim($value)), ['false', '0', 'no', 'nao', 'não'], true);
-        }
-
-        return (bool) $value;
-    }
 }

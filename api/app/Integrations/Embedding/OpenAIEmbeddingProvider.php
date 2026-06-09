@@ -20,7 +20,7 @@ class OpenAIEmbeddingProvider implements EmbeddingProviderInterface
     public function embed(string $text): array
     {
         if ($this->apiKey === '') {
-            throw new RuntimeException('OPENAI_EMBEDDING_API_KEY não configurada.');
+            throw new RuntimeException('API key de embedding não configurada para a empresa.');
         }
 
         $url = rtrim($this->baseUrl, '/').'/embeddings';

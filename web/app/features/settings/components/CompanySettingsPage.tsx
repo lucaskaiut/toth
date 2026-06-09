@@ -90,6 +90,10 @@ export function CompanySettingsPage() {
   const aiBaseUrl = useMemo(() => rows.find((r) => r.key === "ai.base_url")?.value ?? "", [rows]);
   const aiApiKey = useMemo(() => rows.find((r) => r.key === "ai.api_key")?.value ?? "", [rows]);
   const aiModel = useMemo(() => rows.find((r) => r.key === "ai.model")?.value ?? "", [rows]);
+  const embeddingModel = useMemo(
+    () => rows.find((r) => r.key === "embedding.model")?.value ?? "",
+    [rows],
+  );
   const aiSystemPrompt = useMemo(
     () => rows.find((r) => r.key === "ai.system_prompt")?.value ?? "",
     [rows],
@@ -207,7 +211,7 @@ export function CompanySettingsPage() {
                 />
               </FormField>
 
-              <FormField id="ai.model" label="Modelo" hint="Ex.: gpt-4o-mini">
+              <FormField id="ai.model" label="Modelo de chat" hint="Ex.: gpt-4o-mini, qwen3:4b">
                 <Input
                   id="ai.model"
                   value={aiModel}
@@ -215,6 +219,26 @@ export function CompanySettingsPage() {
                     setRows((current) =>
                       upsertRow(current, "ai.model", {
                         key: "ai.model",
+                        type: "string",
+                        value: e.target.value,
+                      }),
+                    )
+                  }
+                />
+              </FormField>
+
+              <FormField
+                id="embedding.model"
+                label="Modelo de embedding"
+                hint="Usa a mesma URL e API key da IA. Ex.: nomic-embed-text"
+              >
+                <Input
+                  id="embedding.model"
+                  value={embeddingModel}
+                  onChange={(e) =>
+                    setRows((current) =>
+                      upsertRow(current, "embedding.model", {
+                        key: "embedding.model",
                         type: "string",
                         value: e.target.value,
                       }),

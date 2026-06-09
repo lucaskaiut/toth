@@ -18,6 +18,7 @@ class CompanyAiConfigResolverTest extends TestCase
         config([
             'ai.default_base_url' => 'https://fallback.example.com/v1',
             'ai.default_model' => 'fallback-model',
+            'embedding.openai.model' => 'fallback-embedding',
         ]);
 
         $company = Company::factory()->create();
@@ -46,7 +47,9 @@ class CompanyAiConfigResolverTest extends TestCase
         $this->assertSame('https://company.example.com/v1', $config->baseUrl);
         $this->assertSame('company-key', $config->apiKey);
         $this->assertSame('company-model', $config->model);
+        $this->assertSame('fallback-embedding', $config->embeddingModel);
         $this->assertTrue($config->isConfigured());
+        $this->assertTrue($config->hasEmbeddingCredentials());
     }
 
     public function test_uses_global_defaults_when_company_values_are_missing(): void
@@ -54,6 +57,7 @@ class CompanyAiConfigResolverTest extends TestCase
         config([
             'ai.default_base_url' => 'https://fallback.example.com/v1',
             'ai.default_model' => 'fallback-model',
+            'embedding.openai.model' => 'fallback-embedding',
         ]);
 
         $company = Company::factory()->create();
@@ -63,6 +67,8 @@ class CompanyAiConfigResolverTest extends TestCase
         $this->assertSame('https://fallback.example.com/v1', $config->baseUrl);
         $this->assertSame('', $config->apiKey);
         $this->assertSame('fallback-model', $config->model);
+        $this->assertSame('fallback-embedding', $config->embeddingModel);
         $this->assertFalse($config->isConfigured());
+        $this->assertFalse($config->hasEmbeddingCredentials());
     }
 }

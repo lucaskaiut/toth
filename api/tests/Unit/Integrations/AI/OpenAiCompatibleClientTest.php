@@ -78,6 +78,37 @@ class OpenAiCompatibleClientTest extends TestCase
         $this->assertTrue($response->shouldReply);
     }
 
+    public function test_accepts_stage_alias_and_applies_fallback_message(): void
+    {
+        Http::fake([
+            '*' => Http::response([
+                'choices' => [
+                    [
+                        'message' => [
+                            'content' => json_encode([
+                                'stage' => 'novo_lead',
+                                'summary' => 'Cliente enviou oi repetidamente.',
+                            ]),
+                        ],
+                    ],
+                ],
+            ]),
+        ]);
+
+        config(['ai.fallback_message' => 'Olá! Como posso ajudar?']);
+
+        $response = $this->makeClient()->chat(new AiChatRequest(
+            baseUrl: 'https://api.example.com/v1',
+            model: 'gpt-4o-mini',
+            apiKey: 'test-key',
+            messages: [new AiChatMessage('system', 'test')],
+        ));
+
+        $this->assertSame('novo_lead', $response->suggestedStage);
+        $this->assertSame('Olá! Como posso ajudar?', $response->message);
+        $this->assertTrue($response->shouldReply);
+    }
+
     public function test_empty_stage_string_is_treated_as_null(): void
     {
         Http::fake([

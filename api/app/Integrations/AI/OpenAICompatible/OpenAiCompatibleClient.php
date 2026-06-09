@@ -8,6 +8,7 @@ use App\Core\AI\DTOs\AiChatRequest;
 use App\Core\AI\DTOs\AiCompletionResponse;
 use App\Core\AI\DTOs\AiStructuredResponse;
 use App\Core\AI\DTOs\AiToolCall;
+use App\Core\AI\Support\AiStructuredResponseParser;
 use App\Modules\IntegrationLog\Domain\Services\IntegrationLogService;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -18,6 +19,7 @@ class OpenAiCompatibleClient implements AiClient
     public function __construct(
         private readonly int $timeout,
         private readonly IntegrationLogService $integrationLogService,
+        private readonly AiStructuredResponseParser $structuredResponseParser = new AiStructuredResponseParser,
     ) {}
 
     public function chat(AiChatRequest $request): AiStructuredResponse
@@ -28,7 +30,7 @@ class OpenAiCompatibleClient implements AiClient
             throw new InvalidArgumentException('Resposta da IA contém tool calls inesperadas.');
         }
 
-        return $this->parseStructuredContent($completion->content);
+        return $this->structuredResponseParser->parse($completion->content);
     }
 
     public function completion(AiChatRequest $request): AiCompletionResponse
@@ -178,54 +180,6 @@ class OpenAiCompatibleClient implements AiClient
             content: $content,
             toolCalls: $toolCalls,
         );
-    }
-
-    private function parseStructuredContent(string $content): AiStructuredResponse
-    {
-        $decoded = json_decode($content, true);
-
-        if (! is_array($decoded)) {
-            throw new InvalidArgumentException('Resposta da IA não está em formato JSON válido.');
-        }
-
-        $shouldReply = $this->parseShouldReply($decoded);
-        $message = trim((string) ($decoded['message'] ?? $decoded['resposta'] ?? ''));
-        $stageRaw = $decoded['suggested_stage'] ?? $decoded['estagio'] ?? null;
-        $stage = is_string($stageRaw) && trim($stageRaw) !== '' ? trim($stageRaw) : null;
-        $summary = trim((string) ($decoded['summary'] ?? $decoded['resumo'] ?? ''));
-
-        if ($shouldReply && $message === '') {
-            throw new InvalidArgumentException('Resposta da IA não contém mensagem.');
-        }
-
-        return new AiStructuredResponse(
-            message: $message,
-            suggestedStage: $stage,
-            summary: $summary,
-            shouldReply: $shouldReply,
-        );
-    }
-
-    /**
-     * @param  array<string, mixed>  $decoded
-     */
-    private function parseShouldReply(array $decoded): bool
-    {
-        if (! array_key_exists('should_reply', $decoded)) {
-            return true;
-        }
-
-        $value = $decoded['should_reply'];
-
-        if (is_bool($value)) {
-            return $value;
-        }
-
-        if (is_string($value)) {
-            return ! in_array(strtolower(trim($value)), ['false', '0', 'no', 'nao', 'não'], true);
-        }
-
-        return (bool) $value;
     }
 
     private function logResponse(string $url, Response $response, ?int $companyId = null): void
