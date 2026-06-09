@@ -124,7 +124,7 @@ class EvolutionWhatsAppClient implements WhatsAppClient
             'syncFullHistory' => true,
             'webhook' => [
                 'url' => $data->webhookUrl,
-                'byEvents' => true,
+                'byEvents' => false,
                 'base64' => true,
                 'headers' => $data->webhookHeaders,
                 'events' => $data->webhookEvents,

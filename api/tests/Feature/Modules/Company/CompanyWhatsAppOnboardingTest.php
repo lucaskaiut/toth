@@ -70,7 +70,7 @@ class CompanyWhatsAppOnboardingTest extends TestCase
                 && $body['number'] === '5511999887766'
                 && $body['qrcode'] === true
                 && $body['webhook']['url'] === 'http://localhost/api/webhooks/whatsapp'
-                && $body['webhook']['byEvents'] === true
+                && $body['webhook']['byEvents'] === false
                 && $body['webhook']['base64'] === true;
         });
     }
