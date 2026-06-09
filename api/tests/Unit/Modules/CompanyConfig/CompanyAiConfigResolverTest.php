@@ -19,6 +19,7 @@ class CompanyAiConfigResolverTest extends TestCase
             'ai.default_base_url' => 'https://fallback.example.com/v1',
             'ai.default_model' => 'fallback-model',
             'embedding.openai.model' => 'fallback-embedding',
+            'embedding.dimensions' => 768,
         ]);
 
         $company = Company::factory()->create();
@@ -48,8 +49,27 @@ class CompanyAiConfigResolverTest extends TestCase
         $this->assertSame('company-key', $config->apiKey);
         $this->assertSame('company-model', $config->model);
         $this->assertSame('fallback-embedding', $config->embeddingModel);
+        $this->assertSame(768, $config->embeddingDimensions);
         $this->assertTrue($config->isConfigured());
         $this->assertTrue($config->hasEmbeddingCredentials());
+    }
+
+    public function test_resolves_embedding_dimensions_from_company_config(): void
+    {
+        config(['embedding.dimensions' => 768]);
+
+        $company = Company::factory()->create();
+
+        CompanyConfig::query()->create([
+            'company_id' => $company->id,
+            'key' => 'embedding.dimensions',
+            'value' => '1536',
+            'type' => CompanyConfigType::Int,
+        ]);
+
+        $config = app(CompanyAiConfigResolver::class)->resolve($company->id);
+
+        $this->assertSame(1536, $config->embeddingDimensions);
     }
 
     public function test_uses_global_defaults_when_company_values_are_missing(): void
@@ -58,6 +78,7 @@ class CompanyAiConfigResolverTest extends TestCase
             'ai.default_base_url' => 'https://fallback.example.com/v1',
             'ai.default_model' => 'fallback-model',
             'embedding.openai.model' => 'fallback-embedding',
+            'embedding.dimensions' => 768,
         ]);
 
         $company = Company::factory()->create();
@@ -68,6 +89,7 @@ class CompanyAiConfigResolverTest extends TestCase
         $this->assertSame('', $config->apiKey);
         $this->assertSame('fallback-model', $config->model);
         $this->assertSame('fallback-embedding', $config->embeddingModel);
+        $this->assertSame(768, $config->embeddingDimensions);
         $this->assertFalse($config->isConfigured());
         $this->assertFalse($config->hasEmbeddingCredentials());
     }

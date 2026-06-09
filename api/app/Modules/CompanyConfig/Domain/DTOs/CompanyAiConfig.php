@@ -9,6 +9,7 @@ readonly class CompanyAiConfig
         public string $apiKey,
         public string $model,
         public string $embeddingModel,
+        public int $embeddingDimensions,
     ) {}
 
     public function isConfigured(): bool

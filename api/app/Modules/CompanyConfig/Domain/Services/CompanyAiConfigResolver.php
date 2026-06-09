@@ -21,6 +21,10 @@ class CompanyAiConfigResolver
                 $config->get('embedding.model')
                 ?? config('embedding.openai.model')
             ),
+            embeddingDimensions: (int) (
+                $config->get('embedding.dimensions')
+                ?? config('embedding.dimensions', 768)
+            ),
         );
     }
 }
