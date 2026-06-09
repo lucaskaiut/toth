@@ -38,6 +38,7 @@ class OpenAiCompatibleClientTest extends TestCase
 
         $client = $this->makeClient();
         $response = $client->chat(new AiChatRequest(
+            baseUrl: 'https://api.example.com/v1',
             model: 'gpt-4o-mini',
             apiKey: 'test-key',
             messages: [new AiChatMessage('system', 'test')],
@@ -67,6 +68,7 @@ class OpenAiCompatibleClientTest extends TestCase
         ]);
 
         $response = $this->makeClient()->chat(new AiChatRequest(
+            baseUrl: 'https://api.example.com/v1',
             model: 'gpt-4o-mini',
             apiKey: 'test-key',
             messages: [new AiChatMessage('system', 'test')],
@@ -95,6 +97,7 @@ class OpenAiCompatibleClientTest extends TestCase
         ]);
 
         $response = $this->makeClient()->chat(new AiChatRequest(
+            baseUrl: 'https://api.example.com/v1',
             model: 'gpt-4o-mini',
             apiKey: 'test-key',
             messages: [new AiChatMessage('system', 'test')],
@@ -110,7 +113,6 @@ class OpenAiCompatibleClientTest extends TestCase
         $logService->shouldReceive('error')->andReturnNull();
 
         return new OpenAiCompatibleClient(
-            baseUrl: 'https://api.example.com/v1',
             timeout: 5,
             integrationLogService: $logService,
         );

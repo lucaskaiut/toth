@@ -3,6 +3,7 @@
 namespace App\Modules\Conversation\Domain\Services;
 
 use App\Core\AI\DTOs\AiChatMessage;
+use App\Modules\CompanyConfig\Domain\Services\CompanyAiConfigResolver;
 use App\Modules\CompanyConfig\Domain\Services\CompanyConfigResolver;
 use App\Modules\Conversation\Domain\Enums\MessageOrigin;
 use App\Modules\Conversation\Domain\Models\Conversation;
@@ -18,6 +19,7 @@ class ConversationContextBuilder
         private readonly KnowledgeContextBuilder $knowledgeContextBuilder,
         private readonly PipelineStageService $pipelineStageService,
         private readonly CompanyIntegrationResolver $companyIntegrationResolver,
+        private readonly CompanyAiConfigResolver $companyAiConfigResolver,
     ) {}
 
     /**
@@ -28,9 +30,10 @@ class ConversationContextBuilder
         $conversation->loadMissing('lead.pipelineStage');
 
         $config = new CompanyConfigResolver($conversation->company_id);
+        $aiConfig = $this->companyAiConfigResolver->resolve($conversation->company_id);
 
         $systemPrompt = (string) ($config->get('ai.system_prompt') ?? config('ai.default_system_prompt'));
-        $model = (string) ($config->get('ai.model') ?? config('ai.default_model'));
+        $model = $aiConfig->model;
 
         $currentStage = $conversation->lead->pipelineStage;
         $summary = $conversation->summary ?? 'Sem resumo anterior.';

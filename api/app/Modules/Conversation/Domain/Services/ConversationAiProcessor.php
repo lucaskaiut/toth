@@ -6,6 +6,7 @@ use App\Core\AI\Contracts\AiClient;
 use App\Core\AI\DTOs\AiChatRequest;
 use App\Core\Whatsapp\Contracts\WhatsAppClient;
 use App\Core\Whatsapp\DTOs\OutgoingWhatsAppMessage;
+use App\Modules\CompanyConfig\Domain\Services\CompanyAiConfigResolver;
 use App\Modules\CompanyConfig\Domain\Services\CompanyConfigResolver;
 use App\Modules\Conversation\Domain\Enums\MessageOrigin;
 use App\Modules\Conversation\Domain\Models\Conversation;
@@ -24,6 +25,7 @@ class ConversationAiProcessor
         private readonly ConversationService $conversationService,
         private readonly LeadService $leadService,
         private readonly AiClient $aiClient,
+        private readonly CompanyAiConfigResolver $companyAiConfigResolver,
         private readonly ConversationAiToolRunner $conversationAiToolRunner,
         private readonly ExternalToolService $externalToolService,
         private readonly IntegrationLogService $integrationLogService,
@@ -39,29 +41,35 @@ class ConversationAiProcessor
         }
 
         $companyId = $conversation->company_id;
-        $config = new CompanyConfigResolver($companyId);
+        $aiConfig = $this->companyAiConfigResolver->resolve($companyId);
 
-        $apiKey = (string) $config->get('ai.api_key', '');
-        $model = (string) ($config->get('ai.model') ?? config('ai.default_model'));
-
-        if ($apiKey === '') {
+        if (! $aiConfig->isConfigured()) {
             return;
         }
+
+        $config = new CompanyConfigResolver($companyId);
 
         $messages = $this->contextBuilder->build($conversation);
 
         $hasExternalTools = $this->externalToolService->connectionForCompany($companyId) !== null;
 
         $chatRequest = new AiChatRequest(
-            model: $model,
-            apiKey: $apiKey,
+            baseUrl: $aiConfig->baseUrl,
+            model: $aiConfig->model,
+            apiKey: $aiConfig->apiKey,
             messages: $messages,
             companyId: $companyId,
         );
 
         if ($hasExternalTools) {
             try {
-                $aiResponse = $this->conversationAiToolRunner->run($companyId, $model, $apiKey, $messages);
+                $aiResponse = $this->conversationAiToolRunner->run(
+                    $companyId,
+                    $aiConfig->baseUrl,
+                    $aiConfig->model,
+                    $aiConfig->apiKey,
+                    $messages,
+                );
             } catch (\Throwable $exception) {
                 $this->integrationLogService->error(
                     integration: 'external:tools',

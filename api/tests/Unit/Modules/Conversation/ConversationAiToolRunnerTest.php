@@ -76,6 +76,7 @@ class ConversationAiToolRunnerTest extends TestCase
 
         $response = $runner->run(
             companyId: 1,
+            baseUrl: 'https://api.example.com/v1',
             model: 'gpt-4o-mini',
             apiKey: 'test-key',
             messages: [new AiChatMessage('system', 'test')],

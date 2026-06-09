@@ -39,7 +39,6 @@ class IntegrationServiceProvider extends ServiceProvider
 
             return match ($driver) {
                 'openai_compatible' => new OpenAiCompatibleClient(
-                    baseUrl: (string) config('ai.base_url'),
                     timeout: (int) config('ai.timeout'),
                     integrationLogService: $app->make(\App\Modules\IntegrationLog\Domain\Services\IntegrationLogService::class),
                 ),

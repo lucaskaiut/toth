@@ -22,6 +22,7 @@ class ConversationAiToolRunner
      */
     public function run(
         int $companyId,
+        string $baseUrl,
         string $model,
         string $apiKey,
         array $messages,
@@ -38,6 +39,7 @@ class ConversationAiToolRunner
             $expectTools = $hasTools && $iteration < ($maxIterations - 1);
 
             $completion = $this->aiClient->completion(new AiChatRequest(
+                baseUrl: $baseUrl,
                 model: $model,
                 apiKey: $apiKey,
                 messages: $messages,

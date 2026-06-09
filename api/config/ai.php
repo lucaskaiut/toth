@@ -2,7 +2,7 @@
 
 return [
     'driver' => env('AI_DRIVER', 'openai_compatible'),
-    'base_url' => env('AI_BASE_URL', 'https://api.openai.com/v1'),
+    'default_base_url' => env('AI_BASE_URL', 'https://api.openai.com/v1'),
     'timeout' => (int) env('AI_TIMEOUT', 60),
     'recent_messages_limit' => (int) env('AI_RECENT_MESSAGES_LIMIT', 20),
     'debounce_seconds' => (int) env('AI_DEBOUNCE_SECONDS', 10),

@@ -16,7 +16,6 @@ use InvalidArgumentException;
 class OpenAiCompatibleClient implements AiClient
 {
     public function __construct(
-        private readonly string $baseUrl,
         private readonly int $timeout,
         private readonly IntegrationLogService $integrationLogService,
     ) {}
@@ -34,7 +33,7 @@ class OpenAiCompatibleClient implements AiClient
 
     public function completion(AiChatRequest $request): AiCompletionResponse
     {
-        $url = rtrim($this->baseUrl, '/').'/chat/completions';
+        $url = rtrim($request->baseUrl, '/').'/chat/completions';
 
         $payload = [
             'model' => $request->model,

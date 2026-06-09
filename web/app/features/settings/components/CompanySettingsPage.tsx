@@ -87,6 +87,7 @@ export function CompanySettingsPage() {
     setRows(normalizeRows(query.data.data));
   }, [query.data?.data]);
 
+  const aiBaseUrl = useMemo(() => rows.find((r) => r.key === "ai.base_url")?.value ?? "", [rows]);
   const aiApiKey = useMemo(() => rows.find((r) => r.key === "ai.api_key")?.value ?? "", [rows]);
   const aiModel = useMemo(() => rows.find((r) => r.key === "ai.model")?.value ?? "", [rows]);
   const aiSystemPrompt = useMemo(
@@ -165,6 +166,26 @@ export function CompanySettingsPage() {
             </div>
 
             <div className="flex flex-col gap-4">
+              <FormField
+                id="ai.base_url"
+                label="URL da API"
+                hint="Endpoint OpenAI-compatible da empresa. Ex.: https://api.openai.com/v1"
+              >
+                <Input
+                  id="ai.base_url"
+                  value={aiBaseUrl}
+                  onChange={(e) =>
+                    setRows((current) =>
+                      upsertRow(current, "ai.base_url", {
+                        key: "ai.base_url",
+                        type: "string",
+                        value: e.target.value,
+                      }),
+                    )
+                  }
+                />
+              </FormField>
+
               <FormField
                 id="ai.api_key"
                 label="API Key"

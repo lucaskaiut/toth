@@ -9,6 +9,7 @@ readonly class AiChatRequest
      * @param  list<array<string, mixed>>|null  $tools
      */
     public function __construct(
+        public string $baseUrl,
         public string $model,
         public string $apiKey,
         public array $messages,
