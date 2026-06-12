@@ -15,7 +15,7 @@ export default defineConfig({
     },
     proxy: {
       "/api": {
-        target: "http://host.docker.internal:8080",
+        target: `http://host.docker.internal:${process.env.DEV_API_PROXY_PORT ?? "8080"}`,
         changeOrigin: true,
       },
     },
