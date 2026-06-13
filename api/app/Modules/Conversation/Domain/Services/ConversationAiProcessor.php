@@ -129,16 +129,26 @@ class ConversationAiProcessor
                 $this->sendWhatsApp($lead->phone, $aiResponse->message, $config);
             }
 
-            if ($aiResponse->requiresHandoff) {
-                $conversation = $this->attendanceService->handoffToHuman($conversation);
-            }
-
             broadcast(new \App\Modules\Realtime\Events\ConversationUpdated($companyId, $conversation->fresh(['lead.pipelineStage'])))->toOthers();
 
             if ($previousStageId !== $lead->pipeline_stage_id) {
                 broadcast(new LeadStageChanged($companyId, $lead))->toOthers();
             }
         });
+
+        if ($aiResponse->requiresHandoff) {
+            $this->integrationLogService->info(
+                integration: 'ai',
+                action: 'handoff_applied',
+                message: 'Conversa encaminhada para atendimento humano.',
+                context: [
+                    'conversation_id' => $conversation->id,
+                ],
+                companyId: $companyId,
+            );
+
+            $this->attendanceService->handoffToHuman($conversation->fresh(['lead.pipelineStage']));
+        }
     }
 
     private function sendWhatsApp(string $phone, string $content, CompanyConfigResolver $config): void

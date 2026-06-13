@@ -55,6 +55,7 @@ class AiStructuredResponseParser
             suggestedStage: $stage,
             summary: $summary,
             shouldReply: $shouldReply && $message !== '',
+            requiresHandoff: $this->parseRequiresHandoff($decoded),
         );
     }
 
@@ -75,6 +76,28 @@ class AiStructuredResponseParser
         $stage = trim($stageRaw);
 
         return $stage !== '' ? $stage : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $decoded
+     */
+    private function parseRequiresHandoff(array $decoded): bool
+    {
+        if (! array_key_exists('requires_handoff', $decoded)) {
+            return false;
+        }
+
+        $value = $decoded['requires_handoff'];
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            return in_array(strtolower(trim($value)), ['true', '1', 'yes', 'sim'], true);
+        }
+
+        return (bool) $value;
     }
 
     /**

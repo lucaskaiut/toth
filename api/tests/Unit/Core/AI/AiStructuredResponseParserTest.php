@@ -76,6 +76,30 @@ class AiStructuredResponseParserTest extends TestCase
         $this->assertFalse($response->isGenericFallback);
     }
 
+    public function test_explicit_requires_handoff_is_parsed(): void
+    {
+        $response = $this->parser->parse(json_encode([
+            'message' => 'Vou encaminhar para nossa equipe confirmar o agendamento.',
+            'suggested_stage' => 'proposta',
+            'summary' => 'Cliente solicitou agendamento de consulta.',
+            'should_reply' => true,
+            'requires_handoff' => true,
+        ]));
+
+        $this->assertTrue($response->requiresHandoff);
+        $this->assertFalse($response->isGenericFallback);
+    }
+
+    public function test_requires_handoff_defaults_to_false_when_omitted(): void
+    {
+        $response = $this->parser->parse(json_encode([
+            'message' => 'Olá!',
+            'summary' => 'Saudação.',
+        ]));
+
+        $this->assertFalse($response->requiresHandoff);
+    }
+
     public function test_throws_for_invalid_json(): void
     {
         $this->expectException(InvalidArgumentException::class);

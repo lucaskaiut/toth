@@ -61,6 +61,8 @@ class ConversationContextBuilder
 
         if ($this->hasExternalIntegration($conversation->company_id)) {
             $systemContent .= "\n\n".trim((string) config('ai.external_tools_system_prompt'));
+        } else {
+            $systemContent .= "\n\n".trim((string) config('ai.no_external_tools_system_prompt'));
         }
 
         if ($knowledgeContext !== '') {
